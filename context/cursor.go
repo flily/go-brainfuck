@@ -95,12 +95,20 @@ func (c *Cursor) Rune() (rune, bool, bool) {
 func (c *Cursor) End() (bool, bool) {
 	lastLine := c.Line+1 >= len(c.File.Contents)
 	line := c.File.Line(c.Line)
+	if line == nil {
+		return true, true
+	}
 
 	if c.Column >= len(line.Content) {
 		return true, lastLine
 	}
 
 	return false, false
+}
+
+func (c *Cursor) EOF() bool {
+	_, eof := c.End()
+	return eof
 }
 
 func (c *Cursor) CurrentEOL() []rune {
@@ -283,8 +291,8 @@ func isWhitespace(r rune) bool {
 
 func (c *Cursor) Skip(n int) {
 	for i := 0; i < n; i++ {
-		_, eof, _ := c.Next()
-		if eof {
+		_, eol, _ := c.Next()
+		if eol {
 			return
 		}
 	}

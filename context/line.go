@@ -213,7 +213,8 @@ func (l *LineContext) HighlightContent() string {
 	}
 
 	h := l.Highlights[0]
-	if len(l.Content.Content) <= 0 {
+	length := l.Content.Length()
+	if length <= 0 || h.Start >= length {
 		return ""
 	}
 

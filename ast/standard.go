@@ -51,7 +51,7 @@ func NewStandardInstructionSet() InstructionSet {
 }
 
 func (s *StandardInstructionSet) CheckInstruction(r rune, ctx *context.Context) *Code {
-	var result *Code
+	var result *Code = nil
 	if slices.Contains(s.SupportedInstructions, r) {
 		result = &Code{
 			Instruction: StandardInstruction(r),
