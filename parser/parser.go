@@ -3,18 +3,18 @@ package parser
 import (
 	"slices"
 
-	"github.com/flily/go-brainfuck/ast"
 	"github.com/flily/go-brainfuck/context"
+	"github.com/flily/go-brainfuck/vm"
 )
 
 type Parser struct {
 	file            *context.FileContext
-	instructionSets []ast.InstructionSet
+	instructionSets []vm.InstructionSet
 }
 
-func NewParser(file *context.FileContext, instructionSets ...ast.InstructionSet) *Parser {
+func NewParser(file *context.FileContext, instructionSets ...vm.InstructionSet) *Parser {
 	if len(instructionSets) <= 0 {
-		instructionSets = []ast.InstructionSet{ast.NewStandardInstructionSet()}
+		instructionSets = []vm.InstructionSet{vm.NewStandardInstructionSet()}
 	}
 
 	p := &Parser{
@@ -25,7 +25,7 @@ func NewParser(file *context.FileContext, instructionSets ...ast.InstructionSet)
 	return p
 }
 
-func (p *Parser) checkSupportedInstruction(r rune, ctx *context.Context) *ast.Code {
+func (p *Parser) checkSupportedInstruction(r rune, ctx *context.Context) *vm.Code {
 	for _, set := range p.instructionSets {
 		if code := set.CheckInstruction(r, ctx); code != nil {
 			return code
@@ -35,7 +35,7 @@ func (p *Parser) checkSupportedInstruction(r rune, ctx *context.Context) *ast.Co
 	return nil
 }
 
-func (p *Parser) Parse() (*ast.CodeMap, error) {
+func (p *Parser) Parse() (*vm.CodeMap, error) {
 	assembler := NewAssembler()
 	cursor := context.NewCursor(p.file)
 

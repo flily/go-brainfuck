@@ -1,4 +1,4 @@
-package ast
+package vm
 
 import (
 	"github.com/flily/go-brainfuck/context"
