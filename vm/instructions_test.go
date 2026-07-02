@@ -6,7 +6,7 @@ import (
 	"slices"
 )
 
-func TestConvertFrom(t *testing.T) {
+func TestConvertInstructionsFrom(t *testing.T) {
 	input := []StandardInstruction{
 		InstructionAdd,
 		InstructionSub,
@@ -17,7 +17,7 @@ func TestConvertFrom(t *testing.T) {
 		InstructionSub,
 	}
 
-	got := ConvertFrom(input)
+	got := ConvertInstructionsFrom(input)
 	if !slices.Equal(got, expected) {
 		t.Fatalf("expected %v, got %v", expected, got)
 	}
