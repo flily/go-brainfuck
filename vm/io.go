@@ -1,12 +1,8 @@
 package vm
 
-type Reader[T MemoryUnit] interface {
-	Read() (T, error)
-}
-
-type Writer[T MemoryUnit] interface {
-	Write(T) error
-}
+import (
+	"io"
+)
 
 func getLength(t any) int {
 	switch t.(type) {
@@ -27,11 +23,6 @@ func getLength(t any) int {
 func GetLength[T any]() int {
 	var t T
 	return getLength(t)
-}
-
-type Encoder[T MemoryUnit] interface {
-	Encode(T, []byte, int) int
-	Decode([]byte) (T, int)
 }
 
 func ConvertFromBE[T MemoryUnit](input []byte) (T, int) {
@@ -86,4 +77,110 @@ func ConvertToLE[T MemoryUnit](value T, output []byte, offset int) int {
 	}
 
 	return l
+}
+
+type EndianEncoder[T MemoryUnit] bool
+
+func NewBigEndianEncoder[T MemoryUnit]() Encoder[T] {
+	return EndianEncoder[T](true)
+}
+
+func NewEncoderBE[T MemoryUnit]() Encoder[T] {
+	return NewBigEndianEncoder[T]()
+}
+
+func NewLittleEndianEncoder[T MemoryUnit]() Encoder[T] {
+	return EndianEncoder[T](false)
+}
+
+func NewEncoderLE[T MemoryUnit]() Encoder[T] {
+	return NewLittleEndianEncoder[T]()
+}
+
+func (e EndianEncoder[T]) Encode(value T, output []byte, offset int) int {
+	if e {
+		return ConvertToBE(value, output, offset)
+	} else {
+		return ConvertToLE(value, output, offset)
+	}
+}
+
+func (e EndianEncoder[T]) Decode(input []byte) (T, int) {
+	if e {
+		return ConvertFromBE[T](input)
+	} else {
+		return ConvertFromLE[T](input)
+	}
+}
+
+type Encoder[T MemoryUnit] interface {
+	Encode(T, []byte, int) int
+	Decode([]byte) (T, int)
+}
+
+type Reader[T MemoryUnit] interface {
+	Read() (T, error)
+}
+
+type Writer[T MemoryUnit] interface {
+	Write(T) error
+}
+
+type MemoryUnitReader[T MemoryUnit] struct {
+	Reader  io.Reader
+	Encoder Encoder[T]
+}
+
+func NewReader[T MemoryUnit](r io.Reader, encoder Encoder[T]) Reader[T] {
+	e := &MemoryUnitReader[T]{
+		Reader:  r,
+		Encoder: encoder,
+	}
+
+	return e
+}
+
+func (r *MemoryUnitReader[T]) Read() (T, error) {
+	var buffer [8]byte
+	l := GetLength[T]()
+	n, err := r.Reader.Read(buffer[:l])
+	if 0 < n && n < l {
+		return 0, io.ErrUnexpectedEOF
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	value, _ := r.Encoder.Decode(buffer[:l])
+	return value, nil
+}
+
+type MemoryUnitWriter[T MemoryUnit] struct {
+	Writer  io.Writer
+	Encoder Encoder[T]
+}
+
+func NewWriter[T MemoryUnit](w io.Writer, encoder Encoder[T]) Writer[T] {
+	e := &MemoryUnitWriter[T]{
+		Writer:  w,
+		Encoder: encoder,
+	}
+
+	return e
+}
+
+func (w *MemoryUnitWriter[T]) Write(value T) error {
+	var buffer [8]byte
+	l := w.Encoder.Encode(value, buffer[:], 0)
+	n, err := w.Writer.Write(buffer[:l])
+	if err != nil {
+		return err
+	}
+
+	if n < l {
+		return io.ErrShortWrite
+	}
+
+	return nil
 }

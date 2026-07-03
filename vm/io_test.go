@@ -1,8 +1,13 @@
 package vm
 
 import (
-	"slices"
 	"testing"
+	"testing/iotest"
+
+	"bytes"
+	"errors"
+	"io"
+	"slices"
 )
 
 func TestGetLengthOnUnsupportedType(t *testing.T) {
@@ -30,8 +35,11 @@ func (c testMemoryUnitEncodingCases[T]) Run(t *testing.T) {
 	buffer := make([]byte, 16)
 	typeLength := GetLength[T]()
 
+	encoderBE := NewEncoderBE[T]()
+	encoderLE := NewEncoderLE[T]()
+
 	for _, cc := range c {
-		value, length := ConvertFromBE[T](cc.BinaryBE)
+		value, length := encoderBE.Decode(cc.BinaryBE)
 		if value != cc.Unit {
 			t.Fatalf("expect %v (%x), got %v (%x)",
 				cc.Unit, cc.Unit, value, value)
@@ -41,7 +49,7 @@ func (c testMemoryUnitEncodingCases[T]) Run(t *testing.T) {
 			t.Fatalf("expect length %d, got %d", typeLength, length)
 		}
 
-		got := ConvertToBE[T](cc.Unit, buffer, 0)
+		got := encoderBE.Encode(cc.Unit, buffer, 0)
 		if got != typeLength {
 			t.Fatalf("expect length %d, got %d", typeLength, got)
 		}
@@ -52,7 +60,7 @@ func (c testMemoryUnitEncodingCases[T]) Run(t *testing.T) {
 		}
 
 		binaryLE := reverse(cc.BinaryBE)
-		value, length = ConvertFromLE[T](binaryLE)
+		value, length = encoderLE.Decode(binaryLE)
 		if value != cc.Unit {
 			t.Fatalf("expect %v (%x), got %v (%x)",
 				cc.Unit, cc.Unit, value, value)
@@ -62,7 +70,7 @@ func (c testMemoryUnitEncodingCases[T]) Run(t *testing.T) {
 			t.Fatalf("expect length %d, got %d", typeLength, length)
 		}
 
-		got = ConvertToLE[T](cc.Unit, buffer, 0)
+		got = encoderLE.Encode(cc.Unit, buffer, 0)
 		if got != typeLength {
 			t.Fatalf("expect length %d, got %d", typeLength, got)
 		}
@@ -234,5 +242,141 @@ func TestConvertToFailure(t *testing.T) {
 
 	if l := ConvertToLE(value, b, 0); l != 0 {
 		t.Fatalf("expect 0, got %d", l)
+	}
+}
+
+func TestReaderRead(t *testing.T) {
+	data := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
+
+	{
+		buffer := bytes.NewBuffer(slices.Clone(data))
+		reader := NewReader(buffer, NewEncoderBE[uint32]())
+		v, err := reader.Read()
+		if err != nil {
+			t.Fatalf("expect no error, got %v", err)
+		}
+
+		if v != 0x01020304 {
+			t.Fatalf("expect 0x01020304, got %x", v)
+		}
+	}
+
+	{
+		buffer := bytes.NewBuffer(slices.Clone(data))
+		reader := NewReader(buffer, NewEncoderLE[uint32]())
+		v, err := reader.Read()
+		if err != nil {
+			t.Fatalf("expect no error, got %v", err)
+		}
+
+		if v != 0x04030201 {
+			t.Fatalf("expect 0x04030201, got %x", v)
+		}
+	}
+}
+
+func TestReaderReadFailure(t *testing.T) {
+	exp := errors.New("lorem ipsum")
+
+	reader := NewReader(iotest.ErrReader(exp), NewEncoderBE[uint32]())
+	_, err := reader.Read()
+	if err == nil {
+		t.Fatalf("expect error, got nil")
+	}
+
+	if !errors.Is(err, exp) {
+		t.Fatalf("expect %v, got %v", exp, err)
+	}
+}
+
+func TestReaderReadShortData(t *testing.T) {
+	data := []byte{0x01, 0x02}
+	buffer := bytes.NewBuffer(data)
+	reader := NewReader(iotest.DataErrReader(buffer), NewEncoderBE[uint32]())
+	_, err := reader.Read()
+	if err == nil {
+		t.Fatalf("expect error, got nil")
+	}
+
+	if !errors.Is(err, io.ErrUnexpectedEOF) {
+		t.Fatalf("expect %v, got %v", io.ErrUnexpectedEOF, err)
+	}
+}
+
+func TestWriterWrite(t *testing.T) {
+	{
+		buffer := bytes.NewBuffer(nil)
+		writer := NewWriter(buffer, NewEncoderBE[uint32]())
+		err := writer.Write(0x01020304)
+		if err != nil {
+			t.Fatalf("expect no error, got %v", err)
+		}
+
+		expect := []byte{0x01, 0x02, 0x03, 0x04}
+		if !bytes.Equal(buffer.Bytes(), expect) {
+			t.Fatalf("expect %v, got %v", expect, buffer.Bytes())
+		}
+	}
+
+	{
+		buffer := bytes.NewBuffer(nil)
+		writer := NewWriter(buffer, NewEncoderLE[uint32]())
+		err := writer.Write(0x01020304)
+		if err != nil {
+			t.Fatalf("expect no error, got %v", err)
+		}
+
+		expect := []byte{0x04, 0x03, 0x02, 0x01}
+		if !bytes.Equal(buffer.Bytes(), expect) {
+			t.Fatalf("expect %v, got %v", expect, buffer.Bytes())
+		}
+	}
+}
+
+type errWriter struct {
+	err error
+}
+
+func newErrWriter(err error) errWriter {
+	return errWriter{err: err}
+}
+
+func (e errWriter) Write(p []byte) (int, error) {
+	return -1, e.err
+}
+
+func TestWriterWriteFailure(t *testing.T) {
+	exp := errors.New("lorem ipsum")
+
+	writer := NewWriter(newErrWriter(exp), NewEncoderBE[uint32]())
+	err := writer.Write(0x01020304)
+	if err == nil {
+		t.Fatalf("expect error, got nil")
+	}
+
+	if !errors.Is(err, exp) {
+		t.Fatalf("expect %v, got %v", exp, err)
+	}
+}
+
+type truncateWriter int
+
+func newTruncateWriter(n int) truncateWriter {
+	return truncateWriter(n)
+}
+
+func (t truncateWriter) Write(p []byte) (int, error) {
+	return int(t), nil
+}
+
+func TestWriterWriteShortData(t *testing.T) {
+	writer := NewWriter(newTruncateWriter(2), NewEncoderBE[uint32]())
+	err := writer.Write(0x01020304)
+	if err == nil {
+		t.Fatalf("expect error, got nil")
+	}
+
+	if !errors.Is(err, io.ErrShortWrite) {
+		t.Fatalf("expect %v, got %v", io.ErrShortWrite, err)
 	}
 }
