@@ -38,18 +38,24 @@ type DiagnosticInfo interface {
 	Level() ErrorLevel
 }
 
+/*
+ * filename:line:column: level: message
+ *  line | code
+ *       | ^^^^
+ *       | note
+ */
 type Diagnostic struct {
 	level   ErrorLevel
-	message string
 	context *Context
+	message string
 	note    string
 }
 
 func NewDiagnostic(level ErrorLevel, ctx *Context, message string, note string) *Diagnostic {
 	e := &Diagnostic{
 		level:   level,
-		message: message,
 		context: ctx,
+		message: message,
 		note:    note,
 	}
 
