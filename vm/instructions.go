@@ -33,6 +33,11 @@ type InstructionSet interface {
 	CheckInstruction(rune, *context.Context) *Code
 }
 
+type InstructionHandlerEntry[T MemoryUnit] struct {
+	Instruction Instruction
+	Handler     InstructionHandler[T]
+}
+
 func ConvertInstructionsFrom[T Instruction](instructions []T) []Instruction {
 	h := make([]Instruction, len(instructions))
 	for i, instr := range instructions {

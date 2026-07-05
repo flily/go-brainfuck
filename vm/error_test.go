@@ -54,6 +54,18 @@ func TestReasonString(t *testing.T) {
 	}
 }
 
+func TestReasonIsError(t *testing.T) {
+	r := ReasonCallStackOverflow
+	if !errors.Is(r, ReasonCallStackOverflow) {
+		t.Fatalf("reason is not of type %s", ReasonCallStackOverflow)
+	}
+
+	derived := r.OnError(nil, "lorem ipsum")
+	if !errors.Is(derived, r) {
+		t.Fatalf("derived error is not of type %s", r)
+	}
+}
+
 func TestRuntimeErrorWithoutContext(t *testing.T) {
 	err := ReasonCallStackOverflow.OnError(nil, "lorem ipsum").
 		With("dolor sit amet")
@@ -65,8 +77,8 @@ func TestRuntimeErrorWithoutContext(t *testing.T) {
 		"[error]: lorem ipsum",
 		"    dolor sit amet",
 	}, "\n")
-	if err.Error() != expected {
-		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, err.Error())
+	if merr := err.Error(); merr != expected {
+		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, merr)
 	}
 }
 
@@ -79,8 +91,8 @@ func TestRuntimeErrorWithoutContextNote(t *testing.T) {
 	expected := strings.Join([]string{
 		"[error]: lorem ipsum",
 	}, "\n")
-	if err.Error() != expected {
-		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, err.Error())
+	if merr := err.Error(); merr != expected {
+		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, merr)
 	}
 }
 
@@ -95,8 +107,8 @@ func TestRuntimeErrorWithoutContextMessage(t *testing.T) {
 		"[error]: call stack overflow",
 		"    dolor sit amet",
 	}, "\n")
-	if err.Error() != expected {
-		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, err.Error())
+	if merr := err.Error(); merr != expected {
+		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, merr)
 	}
 }
 
@@ -109,8 +121,8 @@ func TestRuntimeErrorWithoutContextMessageNote(t *testing.T) {
 	expected := strings.Join([]string{
 		"[error]: call stack overflow",
 	}, "\n")
-	if err.Error() != expected {
-		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, err.Error())
+	if merr := err.Error(); merr != expected {
+		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, merr)
 	}
 }
 
@@ -131,8 +143,8 @@ func TestRuntimeErrorWithContext(t *testing.T) {
 		"      |        ^^^^^^^",
 		"      |        dolor sit amet",
 	}, "\n")
-	if err.Error() != expected {
-		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, err.Error())
+	if merr := err.Error(); merr != expected {
+		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, merr)
 	}
 }
 
@@ -153,8 +165,8 @@ func TestRuntimeErrorWithContextNoMessage(t *testing.T) {
 		"      |        ^^^^^^^",
 		"      |        dolor sit amet",
 	}, "\n")
-	if err.Error() != expected {
-		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, err.Error())
+	if merr := err.Error(); merr != expected {
+		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, merr)
 	}
 }
 
@@ -174,8 +186,8 @@ func TestRuntimeErrorWithContextNoNote(t *testing.T) {
 		"      |        ^^^^^^^",
 		"      |        ",
 	}, "\n")
-	if err.Error() != expected {
-		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, err.Error())
+	if merr := err.Error(); merr != expected {
+		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, merr)
 	}
 }
 
@@ -195,8 +207,8 @@ func TestRuntimeErrorWithContextNoMessageNoNote(t *testing.T) {
 		"      |        ^^^^^^^",
 		"      |        ",
 	}, "\n")
-	if err.Error() != expected {
-		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, err.Error())
+	if merr := err.Error(); merr != expected {
+		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, merr)
 	}
 }
 
@@ -229,9 +241,9 @@ func TestRuntimeErrorOnDifferentLevels(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		if c.err.Error() != c.exp {
+		if merr := c.err.Error(); merr != c.exp {
 			t.Fatalf("error message mismatch for level %s, expected:\n%s\ngot:\n%s",
-				c.err.Level, c.exp, c.err.Error())
+				c.err.Level, c.exp, merr)
 		}
 
 		if !errors.Is(c.err, base) {

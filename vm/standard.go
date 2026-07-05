@@ -61,3 +61,98 @@ func (s *StandardInstructionSet) CheckInstruction(r rune, ctx *context.Context) 
 
 	return result
 }
+
+func GetStandardInstructionSetHandlers[T MemoryUnit]() []InstructionHandlerEntry[T] {
+	handlers := []InstructionHandlerEntry[T]{
+		{Instruction: InstructionAdd, Handler: StandardHandlerAdd[T]},
+		{Instruction: InstructionSub, Handler: StandardHandlerSub[T]},
+		{Instruction: InstructionPointerDec, Handler: StandardHandlerPointerDec[T]},
+		{Instruction: InstructionPointerInc, Handler: StandardHandlerPointerInc[T]},
+		{Instruction: InstructionInput, Handler: StandardHandlerInput[T]},
+		{Instruction: InstructionOutput, Handler: StandardHandlerOutput[T]},
+		{Instruction: InstructionLoopBegin, Handler: StandardHandlerLoopBegin[T]},
+		{Instruction: InstructionLoopEnd, Handler: StandardHandlerLoopEnd[T]},
+	}
+
+	return handlers
+}
+
+func StandardHandlerAdd[T MemoryUnit](vm *VM[T], conf ConfigureContainer) error {
+	vm.Memory[vm.DP] += 1
+	return nil
+}
+
+func StandardHandlerSub[T MemoryUnit](vm *VM[T], conf ConfigureContainer) error {
+	vm.Memory[vm.DP] -= 1
+	return nil
+}
+
+func StandardHandlerPointerDec[T MemoryUnit](vm *VM[T], conf ConfigureContainer) error {
+	vm.DP -= 1
+	return nil
+}
+
+func StandardHandlerPointerInc[T MemoryUnit](vm *VM[T], conf ConfigureContainer) error {
+	vm.DP += 1
+	return nil
+}
+
+func StandardHandlerInput[T MemoryUnit](vm *VM[T], conf ConfigureContainer) error {
+	value, err := vm.Read()
+	if err != nil {
+		return err
+	}
+
+	vm.Memory[vm.DP] = value
+	return nil
+}
+
+func StandardHandlerOutput[T MemoryUnit](vm *VM[T], conf ConfigureContainer) error {
+	value := vm.Memory[vm.DP]
+	err := vm.Write(value)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func StandardHandlerLoopBegin[T MemoryUnit](vm *VM[T], conf ConfigureContainer) error {
+	value := vm.Memory[vm.DP]
+	if value == 0 {
+		next := vm.Code.GetNext(vm.IP)
+		vm.IP = next
+
+	} else {
+		if err := vm.PushIP(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func StandardHandlerLoopEnd[T MemoryUnit](vm *VM[T], conf ConfigureContainer) error {
+	if vm.SP <= 0 {
+		code := vm.GetCurrentCode()
+		err := ReasonCallStackEmpty.
+			OnFatal(code.Context, "call stack empty").
+			With("SP=%d", vm.SP)
+
+		return err
+	}
+
+	value := vm.Memory[vm.DP]
+	if value == 0 {
+		next := vm.Code.GetNext(vm.IP)
+		vm.IP = next
+
+	} else {
+
+	}
+
+	vm.SP -= 1
+	vm.IP = int(vm.IPStack[vm.SP])
+
+	return nil
+}

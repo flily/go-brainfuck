@@ -26,13 +26,21 @@ type Reason int
 
 const (
 	ReasonInvalid Reason = iota
+	ReasonHalt
 	ReasonCallStackOverflow
 	ReasonCallStackEmpty
+	ReasonUnsupportedInstruction
+	ReasonNoInputDevice
+	ReasonNoOutputDevice
+	ReasonInputError
+	ReasonOutputError
 )
 
 var reasonText = map[Reason]string{
-	ReasonCallStackOverflow: "call stack overflow",
-	ReasonCallStackEmpty:    "call stack empty",
+	ReasonHalt:                   "halt",
+	ReasonCallStackOverflow:      "call stack overflow",
+	ReasonCallStackEmpty:         "call stack empty",
+	ReasonUnsupportedInstruction: "unsupported instruction",
 }
 
 func (r Reason) String() string {
@@ -124,7 +132,7 @@ func (e *RuntimeError) Is(target error) bool {
 	return e.Reason == reason
 }
 
-func (e *RuntimeError) With(note string) *RuntimeError {
-	e.Note = note
+func (e *RuntimeError) With(format string, args ...any) *RuntimeError {
+	e.Note = fmt.Sprintf(format, args...)
 	return e
 }
