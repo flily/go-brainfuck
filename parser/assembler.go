@@ -10,8 +10,8 @@ type StackItem struct {
 }
 
 type Assembler struct {
-	code  []vm.Code
 	stack *Stack[StackItem]
+	code  []vm.Code
 	next  []int
 }
 
@@ -47,20 +47,26 @@ func (s *Assembler) Pop() (*vm.Code, int) {
 }
 
 func (s *Assembler) AddCode(code *vm.Code) bool {
-	s.code = append(s.code, *code)
+	next := -1
 
 	result := true
 	switch code.Instruction {
 	case vm.InstructionLoopBegin:
-		s.Push(code, len(s.code)-1)
+		s.Push(code, len(s.code))
 
 	case vm.InstructionLoopEnd:
 		_, beginIndex := s.Pop()
 		if beginIndex < 0 {
 			// ']' without matching '['
 			result = false
+		} else {
+			s.next[beginIndex] = len(s.code)
+			next = beginIndex
 		}
 	}
+
+	s.code = append(s.code, *code)
+	s.next = append(s.next, next)
 
 	return result
 }

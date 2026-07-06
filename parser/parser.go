@@ -45,14 +45,16 @@ func (p *Parser) Parse() (*vm.CodeMap, error) {
 		if code != nil {
 			ok := assembler.AddCode(code)
 			if !ok {
-				err := context.NewError(code.Context, "no matched ']' found")
+				err := context.NewError(code.Context, "unexpected closing loop bracket").
+					With("no matched '[' for this")
 				return nil, err
 			}
 		}
 	}
 
 	if code, index := assembler.Pop(); index >= 0 {
-		err := context.NewError(code.Context, "no matched '[' found")
+		err := context.NewError(code.Context, "unclosed loop bracket").
+			With("no matched ']' for this")
 		return nil, err
 	}
 

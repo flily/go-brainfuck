@@ -16,10 +16,6 @@ func NewStackWithCapacity[T any](capacity int) *Stack[T] {
 	return s
 }
 
-func NewStack[T any]() *Stack[T] {
-	return NewStackWithCapacity[T](DefaultStackCapacity)
-}
-
 func (s *Stack[T]) Push(item *T) {
 	s.items[s.index] = item
 	s.index++
@@ -40,4 +36,12 @@ func (s *Stack[T]) Pop() (*T, bool) {
 	item := s.items[s.index]
 	s.items[s.index] = nil
 	return item, true
+}
+
+func (s *Stack[T]) IsEmpty() bool {
+	return s.index <= 0
+}
+
+func (s *Stack[T]) Size() int {
+	return s.index
 }
