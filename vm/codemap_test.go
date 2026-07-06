@@ -1,12 +1,14 @@
 package vm
 
 import (
-	"slices"
 	"testing"
+
+	"slices"
 )
 
 func TestCodeMapGetNext(t *testing.T) {
 	codemap := NewCodeMap()
+	codemap.AddFile(nil)
 
 	codemap.Codes = InstructionsToCodes([]Instruction{
 		InstructionAdd,

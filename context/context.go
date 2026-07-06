@@ -77,7 +77,7 @@ func (c *Context) Join(ctxs ...*Context) *Context {
 	return result
 }
 
-func (c *Context) Load(prev int, next int) {
+func (c *Context) Load(prev int, next int) *Context {
 	first := true
 	lineFirst, lineLast := 100000000000, 0
 	for _, line := range c.Lines {
@@ -109,6 +109,8 @@ func (c *Context) Load(prev int, next int) {
 			c.NextLines = append(c.NextLines, c.File.LineContext(i))
 		}
 	}
+
+	return c
 }
 
 func (c *Context) HighlightTextWith(indicator string, format string, args ...any) string {

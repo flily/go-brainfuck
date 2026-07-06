@@ -1,11 +1,11 @@
-package parser
+package utils
 
 type Stack[T any] struct {
 	items []*T
 	index int
 }
 
-const DefaultStackCapacity = 1024
+
 
 func NewStackWithCapacity[T any](capacity int) *Stack[T] {
 	s := &Stack[T]{

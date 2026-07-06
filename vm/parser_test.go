@@ -1,4 +1,4 @@
-package parser
+package vm
 
 import (
 	"testing"
@@ -7,14 +7,13 @@ import (
 	"strings"
 
 	"github.com/flily/go-brainfuck/context"
-	"github.com/flily/go-brainfuck/vm"
 )
 
 const (
 	testFilename = "test.bf"
 )
 
-func parseTestCodeOk(t *testing.T, code string, expCodes []vm.Instruction, expNext []int) {
+func parseTestCodeOk(t *testing.T, code string, expCodes []Instruction, expNext []int) {
 	t.Helper()
 
 	file := context.ReadFileString(testFilename, code)
@@ -39,7 +38,7 @@ func parseTestCodeFailure(t *testing.T, code string, errMessage string) {
 	t.Helper()
 
 	file := context.ReadFileString(testFilename, code)
-	parser := NewParser(file, vm.NewStandardInstructionSet())
+	parser := NewParser(file, NewStandardInstructionSet())
 	codemap, err := parser.Parse()
 	if codemap != nil {
 		t.Fatalf("expected parse error, but got code map: %v", codemap)
@@ -54,10 +53,10 @@ func parseTestCodeFailure(t *testing.T, code string, errMessage string) {
 	}
 }
 
-func buildCodeMap(codes []vm.Instruction, nexts []int) *vm.CodeMap {
-	codemap := vm.NewCodeMap()
+func buildCodeMap(codes []Instruction, nexts []int) *CodeMap {
+	codemap := NewCodeMap()
 
-	codemap.Codes = vm.InstructionsToCodes(codes)
+	codemap.Codes = InstructionsToCodes(codes)
 	codemap.Next = slices.Clone(nexts)
 
 	return codemap
@@ -66,10 +65,10 @@ func buildCodeMap(codes []vm.Instruction, nexts []int) *vm.CodeMap {
 func TestParseSimpleCode(t *testing.T) {
 	code := "+++"
 
-	codes := []vm.Instruction{
-		vm.InstructionAdd,
-		vm.InstructionAdd,
-		vm.InstructionAdd,
+	codes := []Instruction{
+		InstructionAdd,
+		InstructionAdd,
+		InstructionAdd,
 	}
 	nexts := []int{
 		-1,
@@ -83,10 +82,10 @@ func TestParseSimpleCode(t *testing.T) {
 func TestParseSimpleLoopCode(t *testing.T) {
 	code := "[-]"
 
-	codes := []vm.Instruction{
-		vm.InstructionLoopBegin,
-		vm.InstructionSub,
-		vm.InstructionLoopEnd,
+	codes := []Instruction{
+		InstructionLoopBegin,
+		InstructionSub,
+		InstructionLoopEnd,
 	}
 	nexts := []int{
 		2,
@@ -100,11 +99,11 @@ func TestParseSimpleLoopCode(t *testing.T) {
 func TestParseWithNonInstructionCharacters(t *testing.T) {
 	code := "++a--b"
 
-	codes := []vm.Instruction{
-		vm.InstructionAdd,
-		vm.InstructionAdd,
-		vm.InstructionSub,
-		vm.InstructionSub,
+	codes := []Instruction{
+		InstructionAdd,
+		InstructionAdd,
+		InstructionSub,
+		InstructionSub,
 	}
 	nexts := []int{
 		-1,

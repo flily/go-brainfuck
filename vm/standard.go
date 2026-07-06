@@ -143,16 +143,15 @@ func StandardHandlerLoopEnd[T MemoryUnit](vm *VM[T], conf ConfigureContainer) er
 	}
 
 	value := vm.Memory[vm.DP]
-	if value == 0 {
-		next := vm.Code.GetNext(vm.IP)
-		vm.IP = next
+	if value != 0 {
+		if err := vm.PopIP(); err != nil {
+			return err
+		}
 
-	} else {
-
+		if err := vm.PushIP(); err != nil {
+			return err
+		}
 	}
-
-	vm.SP -= 1
-	vm.IP = int(vm.IPStack[vm.SP])
 
 	return nil
 }
