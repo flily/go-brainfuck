@@ -1,6 +1,8 @@
 package vm
 
 import (
+	"errors"
+	"io"
 	"slices"
 
 	"github.com/flily/go-brainfuck/context"
@@ -100,6 +102,10 @@ func StandardHandlerPointerInc[T MemoryUnit](vm *VM[T], conf ConfigureContainer)
 func StandardHandlerInput[T MemoryUnit](vm *VM[T], conf ConfigureContainer) error {
 	value, err := vm.Read()
 	if err != nil {
+		if errors.Is(err, io.EOF) {
+			err = nil
+		}
+
 		return err
 	}
 
@@ -144,11 +150,11 @@ func StandardHandlerLoopEnd[T MemoryUnit](vm *VM[T], conf ConfigureContainer) er
 
 	value := vm.Memory[vm.DP]
 	if value != 0 {
-		if err := vm.PopIP(); err != nil {
+		if err := vm.UseIP(); err != nil {
 			return err
 		}
-
-		if err := vm.PushIP(); err != nil {
+	} else {
+		if _, err := vm.PopIP(); err != nil {
 			return err
 		}
 	}

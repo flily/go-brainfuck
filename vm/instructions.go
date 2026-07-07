@@ -9,20 +9,6 @@ type Instruction interface {
 	String() string
 }
 
-type Configure uint32
-
-const (
-	StandardConfigureMask Configure = 0xff000000
-)
-
-func (c Configure) IsStandard() bool {
-	return (c & StandardConfigureMask) == 0
-}
-
-type ConfigureContainer interface {
-	GetConfigure(Configure) uint32
-}
-
 type MemoryUnit interface {
 	uint8 | uint16 | uint32 | uint64 | int8 | int16 | int32 | int64
 }

@@ -5,6 +5,8 @@ import (
 	"slices"
 )
 
+const DefaultStackCapacity = 1024
+
 /*
  * Memory offset
  * +-----+-----+-----+-----+-----+-----+-----+
@@ -72,6 +74,13 @@ func (m *VM[T]) LoadCode(code *CodeMap) *VM[T] {
 	return m
 }
 
+func (m *VM[T]) LoadData(data []T) *VM[T] {
+	for i := 0; i < min(len(data), len(m.Memory)); i++ {
+		m.Memory[i] = data[i]
+	}
+	return m
+}
+
 func (m *VM[T]) Reset() {
 	m.DP = 0
 	m.SP = 0
@@ -129,7 +138,21 @@ func (m *VM[T]) PushIP() error {
 	return nil
 }
 
-func (m *VM[T]) PopIP() error {
+func (m *VM[T]) PopIP() (int, error) {
+	if m.SP <= 0 {
+		code := m.GetCurrentCode()
+		err := ReasonCallStackEmpty.
+			OnFatal(code.Context, "call stack is empty").
+			With("SP=%d", m.SP)
+		return -1, err
+	}
+
+	m.SP -= 1
+	n := m.IPStack[m.SP]
+	return n, nil
+}
+
+func (m *VM[T]) UseIP() error {
 	if m.SP <= 0 {
 		code := m.GetCurrentCode()
 		err := ReasonCallStackEmpty.
@@ -138,9 +161,7 @@ func (m *VM[T]) PopIP() error {
 		return err
 	}
 
-	m.SP -= 1
-	m.IP = m.IPStack[m.SP]
-
+	m.IP = m.IPStack[m.SP-1]
 	return nil
 }
 
