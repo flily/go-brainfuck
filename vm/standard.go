@@ -2,7 +2,6 @@ package vm
 
 import (
 	"errors"
-	"io"
 	"slices"
 
 	"github.com/flily/go-brainfuck/context"
@@ -99,14 +98,32 @@ func StandardHandlerPointerInc[T MemoryUnit](vm *VM[T], conf ConfigureContainer)
 	return nil
 }
 
+// In beef (https://kiyuko.org/software/beef)
+// data cell under the pointer is set to 0 when EOF is reached.
+//
+// In the original work by Urban Müller, (https://aminet.net/package/dev/lang/brainfuck-2.lha)
+// behavior is not defined when EOF is reached.
+// But in c implement code, use `int getchar()` to read input and return -1 when EOF is reached.
+// The data cell under the pointer is set to 255 (0xff) when -1 is assigned.
 func StandardHandlerInput[T MemoryUnit](vm *VM[T], conf ConfigureContainer) error {
 	value, err := vm.Read()
 	if err != nil {
-		if errors.Is(err, io.EOF) {
-			err = nil
-		}
+		if !errors.Is(err, ReasonReadEOF) {
+			return err
 
-		return err
+		} else {
+			if raiseErr, found := conf.GetBoolean(ConfigureReadEOFRaiseError); found && raiseErr {
+				return err
+			}
+
+			if ignoreEOF, found := conf.GetBoolean(ConfigureReadValueIgnoreOnEOF); found && ignoreEOF {
+				return nil
+			}
+
+			if valueOnEOF, found := conf.GetInt(ConfigureReadValueOnEOF); found {
+				value = T(valueOnEOF)
+			}
+		}
 	}
 
 	vm.Memory[vm.DP] = value

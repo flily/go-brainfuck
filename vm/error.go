@@ -32,8 +32,9 @@ const (
 	ReasonUnsupportedInstruction
 	ReasonNoInputDevice
 	ReasonNoOutputDevice
-	ReasonInputError
-	ReasonOutputError
+	ReasonReadError
+	ReasonReadEOF
+	ReasonWriteError
 )
 
 var reasonText = map[Reason]string{
@@ -41,6 +42,11 @@ var reasonText = map[Reason]string{
 	ReasonCallStackOverflow:      "call stack overflow",
 	ReasonCallStackEmpty:         "call stack empty",
 	ReasonUnsupportedInstruction: "unsupported instruction",
+	ReasonNoInputDevice:          "no input device",
+	ReasonNoOutputDevice:         "no output device",
+	ReasonReadError:              "read error",
+	ReasonReadEOF:                "read EOF",
+	ReasonWriteError:             "write error",
 }
 
 func (r Reason) String() string {

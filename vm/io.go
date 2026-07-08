@@ -126,6 +126,11 @@ type Writer[T MemoryUnit] interface {
 	Write(T) error
 }
 
+type DumpableWriter[T MemoryUnit] interface {
+	Writer[T]
+	Dump() []T
+}
+
 type MemoryUnitReader[T MemoryUnit] struct {
 	Reader  io.Reader
 	Encoder Encoder[T]
@@ -199,6 +204,10 @@ func NewBufferedReader[T MemoryUnit](data []T) *BufferedReader[T] {
 	return r
 }
 
+func NewBufferedInput[T MemoryUnit](items ...T) *BufferedReader[T] {
+	return NewBufferedReader(items)
+}
+
 func (r *BufferedReader[T]) Read() (T, error) {
 	if r.Offset >= len(r.Data) {
 		return 0, io.EOF
@@ -225,4 +234,8 @@ func NewBufferedWriter[T MemoryUnit](size int) *BufferedWriter[T] {
 func (w *BufferedWriter[T]) Write(value T) error {
 	w.Data = append(w.Data, value)
 	return nil
+}
+
+func (w *BufferedWriter[T]) Dump() []T {
+	return w.Data
 }

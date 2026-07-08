@@ -23,7 +23,7 @@ func TestGenericConfigureBoolean(t *testing.T) {
 		3: uint64(42),
 	}
 
-	v1, ok := generic.GetBooleanConfigure(1)
+	v1, ok := generic.GetBoolean(1)
 	if !ok {
 		t.Fatalf("expected to find boolean configure for 1")
 	}
@@ -32,7 +32,7 @@ func TestGenericConfigureBoolean(t *testing.T) {
 		t.Fatalf("expected boolean configure for 1 to be true, got %v", v1)
 	}
 
-	v2, ok := generic.GetIntConfigure(1)
+	v2, ok := generic.GetInt(1)
 	if ok {
 		t.Fatalf("expected not to find int configure for 1")
 	}
@@ -41,7 +41,7 @@ func TestGenericConfigureBoolean(t *testing.T) {
 		t.Fatalf("expected int configure for 1 to be 0, got %v", v2)
 	}
 
-	v3, ok := generic.GetUintConfigure(1)
+	v3, ok := generic.GetUint(1)
 	if ok {
 		t.Fatalf("expected not to find uint configure for 1")
 	}
@@ -58,7 +58,7 @@ func TestGenericConfigureInt(t *testing.T) {
 		3: uint64(42),
 	}
 
-	v1, ok := generic.GetIntConfigure(2)
+	v1, ok := generic.GetInt(2)
 	if !ok {
 		t.Fatalf("expected to find int configure for 2")
 	}
@@ -67,7 +67,7 @@ func TestGenericConfigureInt(t *testing.T) {
 		t.Fatalf("expected int configure for 2 to be 42, got %v", v1)
 	}
 
-	v2, ok := generic.GetBooleanConfigure(2)
+	v2, ok := generic.GetBoolean(2)
 	if ok {
 		t.Fatalf("expected not to find boolean configure for 2")
 	}
@@ -76,7 +76,7 @@ func TestGenericConfigureInt(t *testing.T) {
 		t.Fatalf("expected boolean configure for 2 to be false, got %v", v2)
 	}
 
-	v3, ok := generic.GetUintConfigure(2)
+	v3, ok := generic.GetUint(2)
 	if ok {
 		t.Fatalf("expected not to find uint configure for 2")
 	}
@@ -93,7 +93,7 @@ func TestGenericConfigureUint(t *testing.T) {
 		3: uint64(42),
 	}
 
-	v1, ok := generic.GetUintConfigure(3)
+	v1, ok := generic.GetUint(3)
 	if !ok {
 		t.Fatalf("expected to find uint configure for 3")
 	}
@@ -102,7 +102,7 @@ func TestGenericConfigureUint(t *testing.T) {
 		t.Fatalf("expected uint configure for 3 to be 42, got %v", v1)
 	}
 
-	v2, ok := generic.GetBooleanConfigure(3)
+	v2, ok := generic.GetBoolean(3)
 	if ok {
 		t.Fatalf("expected not to find boolean configure for 3")
 	}
@@ -111,7 +111,7 @@ func TestGenericConfigureUint(t *testing.T) {
 		t.Fatalf("expected boolean configure for 3 to be false, got %v", v2)
 	}
 
-	v3, ok := generic.GetIntConfigure(3)
+	v3, ok := generic.GetInt(3)
 	if ok {
 		t.Fatalf("expected not to find int configure for 3")
 	}

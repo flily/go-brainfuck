@@ -2,6 +2,7 @@ package vm
 
 import (
 	"errors"
+	"io"
 	"slices"
 )
 
@@ -35,12 +36,13 @@ type VM[T MemoryUnit] struct {
 	IPStack     []int
 	Input       Reader[T]
 	Output      Writer[T]
-	handlers    map[Instruction]InstructionHandler[T]
+	Configure   ConfigureContainer
 	MemorySize  int
 	StackSize   int
 	IP          int // Instruction Pointer
 	DP          int // Data Pointer
 	SP          int // Stack Pointer
+	handlers    map[Instruction]InstructionHandler[T]
 	currentCode *Code
 }
 
@@ -49,6 +51,9 @@ func New[T MemoryUnit](memorySize int, stackSize int) *VM[T] {
 		Memory:     make([]T, memorySize),
 		Code:       nil,
 		IPStack:    make([]int, stackSize),
+		Input:      nil,
+		Output:     nil,
+		Configure:  NewGenericConfigure(),
 		handlers:   make(map[Instruction]InstructionHandler[T]),
 		MemorySize: memorySize,
 		StackSize:  stackSize,
@@ -177,9 +182,19 @@ func (m *VM[T]) Read() (T, error) {
 	value, err := m.Input.Read()
 	if err != nil {
 		current := m.GetCurrentCode()
-		e := ReasonInputError.
-			OnFatal(current.Context, "input error: %s", err).
-			With("read from input failed")
+		var e error
+
+		if errors.Is(err, io.EOF) {
+			e = ReasonReadEOF.
+				OnFatal(current.Context, "read EOF").
+				With("no more data to read")
+
+		} else {
+			e = ReasonReadError.
+				OnFatal(current.Context, "read error: %s", err).
+				With("read from input failed")
+		}
+
 		return 0, e
 	}
 
@@ -198,8 +213,8 @@ func (m *VM[T]) Write(value T) error {
 	err := m.Output.Write(value)
 	if err != nil {
 		current := m.GetCurrentCode()
-		e := ReasonOutputError.
-			OnFatal(current.Context, "output error: %s", err).
+		e := ReasonWriteError.
+			OnFatal(current.Context, "write error: %s", err).
 			With("write to output failed")
 		return e
 	}
@@ -235,7 +250,7 @@ func (m *VM[T]) Step() error {
 		return ReasonHalt
 	}
 
-	err := m.ExecuteInstruction(ins, nil)
+	err := m.ExecuteInstruction(ins, m.Configure)
 	m.IP += 1
 	return err
 }
