@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/flily/go-brainfuck/context"
+	"github.com/flily/go-brainfuck/parser"
 	"github.com/flily/go-brainfuck/vm"
 )
 
@@ -16,7 +17,7 @@ func GenericMain[T vm.MemoryUnit](conf *Configure, source string) {
 		return
 	}
 
-	parser := vm.NewParser(fctx)
+	parser := parser.NewParser(fctx)
 	codemap, err := parser.Parse()
 	if err != nil {
 		fmt.Printf("error parsing file:\n%s\n", err)

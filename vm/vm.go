@@ -4,9 +4,20 @@ import (
 	"errors"
 	"io"
 	"slices"
+
+	"github.com/flily/go-brainfuck/config"
+	"github.com/flily/go-brainfuck/infra"
 )
 
-const DefaultStackCapacity = 1024
+
+
+type (
+	MemoryUnit     = infra.MemoryUnit
+	Instruction    = infra.Instruction
+	InstructionSet = infra.InstructionSet
+	Code           = infra.Code
+	CodeMap        = infra.CodeMap
+)
 
 /*
  * Memory offset
@@ -30,13 +41,20 @@ type Snapshot[T MemoryUnit] struct {
 	SP           int
 }
 
+type InstructionHandler[T MemoryUnit] func(vm *VM[T], conf config.ConfigureContainer) error
+
+type InstructionHandlerEntry[T MemoryUnit] struct {
+	Instruction Instruction
+	Handler     InstructionHandler[T]
+}
+
 type VM[T MemoryUnit] struct {
 	Memory      []T
 	Code        *CodeMap
 	IPStack     []int
 	Input       Reader[T]
 	Output      Writer[T]
-	Configure   ConfigureContainer
+	Configure   config.ConfigureContainer
 	MemorySize  int
 	StackSize   int
 	IP          int // Instruction Pointer
@@ -53,7 +71,7 @@ func New[T MemoryUnit](memorySize int, stackSize int) *VM[T] {
 		IPStack:    make([]int, stackSize),
 		Input:      nil,
 		Output:     nil,
-		Configure:  NewGenericConfigure(),
+		Configure:  config.NewGenericConfigure(),
 		handlers:   make(map[Instruction]InstructionHandler[T]),
 		MemorySize: memorySize,
 		StackSize:  stackSize,
@@ -116,7 +134,7 @@ func (m *VM[T]) GetCurrentCode() *Code {
 	return m.currentCode
 }
 
-func (m *VM[T]) ExecuteInstruction(code *Code, conf ConfigureContainer) error {
+func (m *VM[T]) ExecuteInstruction(code *Code, conf config.ConfigureContainer) error {
 	handler, ok := m.handlers[code.Instruction]
 	if !ok {
 		err := ReasonUnsupportedInstruction.

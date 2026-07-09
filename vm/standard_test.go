@@ -2,6 +2,8 @@ package vm
 
 import (
 	"testing"
+
+	"github.com/flily/go-brainfuck/infra"
 )
 
 func TestBasicInstructionByte(t *testing.T) {
@@ -21,7 +23,7 @@ func TestBasicInstructionByte(t *testing.T) {
 
 	for _, test := range tests {
 		raw := test.instruction
-		var _ Instruction = raw
+		var _ infra.Instruction = raw
 
 		if raw.Char() != test.expected {
 			t.Fatalf("instruction char mismatch for '%c' (0x%x): expected 0x%x, got 0x%x",
@@ -47,7 +49,7 @@ func TestBasicInstructionString(t *testing.T) {
 
 	for _, test := range tests {
 		raw := test.instruction
-		var _ Instruction = raw
+		var _ infra.Instruction = raw
 
 		if raw.String() != test.expected {
 			t.Fatalf("instruction string mismatch for '%c' (0x%x): expected '%s', got '%c'",

@@ -1,4 +1,4 @@
-package vm
+package parser
 
 import (
 	"testing"
@@ -7,13 +7,15 @@ import (
 	"strings"
 
 	"github.com/flily/go-brainfuck/context"
+	"github.com/flily/go-brainfuck/infra"
+	"github.com/flily/go-brainfuck/vm"
 )
 
 const (
 	testFilename = "test.bf"
 )
 
-func parseTestCodeOk(t *testing.T, code string, expCodes []Instruction, expNext []int) {
+func parseTestCodeOk(t *testing.T, code string, expCodes []infra.Instruction, expNext []int) {
 	t.Helper()
 
 	file := context.ReadFileString(testFilename, code)
@@ -38,7 +40,7 @@ func parseTestCodeFailure(t *testing.T, code string, errMessage string) {
 	t.Helper()
 
 	file := context.ReadFileString(testFilename, code)
-	parser := NewParser(file, NewStandardInstructionSet())
+	parser := NewParser(file, infra.NewStandardInstructionSet())
 	codemap, err := parser.Parse()
 	if codemap != nil {
 		t.Fatalf("expected parse error, but got code map: %v", codemap)
@@ -54,9 +56,9 @@ func parseTestCodeFailure(t *testing.T, code string, errMessage string) {
 }
 
 func buildCodeMap(codes []Instruction, nexts []int) *CodeMap {
-	codemap := NewCodeMap()
+	codemap := infra.NewCodeMap()
 
-	codemap.Codes = InstructionsToCodes(codes)
+	codemap.Codes = infra.InstructionsToCodes(codes)
 	codemap.Next = slices.Clone(nexts)
 
 	return codemap
@@ -66,9 +68,9 @@ func TestParseSimpleCode(t *testing.T) {
 	code := "+++"
 
 	codes := []Instruction{
-		InstructionAdd,
-		InstructionAdd,
-		InstructionAdd,
+		vm.InstructionAdd,
+		vm.InstructionAdd,
+		vm.InstructionAdd,
 	}
 	nexts := []int{
 		-1,
@@ -83,9 +85,9 @@ func TestParseSimpleLoopCode(t *testing.T) {
 	code := "[-]"
 
 	codes := []Instruction{
-		InstructionLoopBegin,
-		InstructionSub,
-		InstructionLoopEnd,
+		vm.InstructionLoopBegin,
+		vm.InstructionSub,
+		vm.InstructionLoopEnd,
 	}
 	nexts := []int{
 		2,
@@ -100,10 +102,10 @@ func TestParseWithNonInstructionCharacters(t *testing.T) {
 	code := "++a--b"
 
 	codes := []Instruction{
-		InstructionAdd,
-		InstructionAdd,
-		InstructionSub,
-		InstructionSub,
+		vm.InstructionAdd,
+		vm.InstructionAdd,
+		vm.InstructionSub,
+		vm.InstructionSub,
 	}
 	nexts := []int{
 		-1,

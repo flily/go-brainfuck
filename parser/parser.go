@@ -1,9 +1,18 @@
-package vm
+package parser
 
 import (
 	"slices"
 
 	"github.com/flily/go-brainfuck/context"
+	"github.com/flily/go-brainfuck/infra"
+)
+
+const DefaultStackCapacity = 1024
+
+type (
+	Instruction    = infra.Instruction
+	InstructionSet = infra.InstructionSet
+	CodeMap        = infra.CodeMap
 )
 
 type Parser struct {
@@ -13,7 +22,7 @@ type Parser struct {
 
 func NewParser(file *context.FileContext, instructionSets ...InstructionSet) *Parser {
 	if len(instructionSets) <= 0 {
-		instructionSets = []InstructionSet{NewStandardInstructionSet()}
+		instructionSets = []InstructionSet{infra.NewStandardInstructionSet()}
 	}
 
 	p := &Parser{
@@ -24,7 +33,7 @@ func NewParser(file *context.FileContext, instructionSets ...InstructionSet) *Pa
 	return p
 }
 
-func (p *Parser) checkSupportedInstruction(r rune, ctx *context.Context) *Code {
+func (p *Parser) checkSupportedInstruction(r rune, ctx *context.Context) *infra.Code {
 	for _, set := range p.instructionSets {
 		if code := set.CheckInstruction(r, ctx); code != nil {
 			return code
@@ -34,7 +43,7 @@ func (p *Parser) checkSupportedInstruction(r rune, ctx *context.Context) *Code {
 	return nil
 }
 
-func (p *Parser) Parse() (*CodeMap, error) {
+func (p *Parser) Parse() (*infra.CodeMap, error) {
 	assembler := NewAssembler()
 	cursor := context.NewCursor(p.file)
 

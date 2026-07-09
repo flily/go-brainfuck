@@ -1,4 +1,4 @@
-package vm
+package infra
 
 import (
 	"testing"
@@ -11,9 +11,9 @@ func TestCodeMapGetNext(t *testing.T) {
 	codemap.AddFile(nil)
 
 	codemap.Codes = InstructionsToCodes([]Instruction{
-		InstructionAdd,
-		InstructionSub,
-		InstructionPointerDec,
+		runeInst('+'),
+		runeInst('-'),
+		runeInst('>'),
 	})
 	codemap.Next = []int{
 		1,
@@ -41,8 +41,8 @@ func TestCodeMapGetNext(t *testing.T) {
 func TestCodeMapEqualsEqual(t *testing.T) {
 	codemap1 := NewCodeMap()
 	codemap1.Codes = InstructionsToCodes([]Instruction{
-		InstructionAdd,
-		InstructionSub,
+		runeInst('+'),
+		runeInst('-'),
 	})
 	codemap1.Next = []int{
 		1,
@@ -51,8 +51,8 @@ func TestCodeMapEqualsEqual(t *testing.T) {
 
 	codemap2 := NewCodeMap()
 	codemap2.Codes = InstructionsToCodes([]Instruction{
-		InstructionAdd,
-		InstructionSub,
+		runeInst('+'),
+		runeInst('-'),
 	})
 	codemap2.Next = []int{
 		1,
@@ -67,8 +67,8 @@ func TestCodeMapEqualsEqual(t *testing.T) {
 func TestCodeMapEqualsNotEqualOnLength(t *testing.T) {
 	codemap1 := NewCodeMap()
 	codemap1.Codes = InstructionsToCodes([]Instruction{
-		InstructionAdd,
-		InstructionSub,
+		runeInst('+'),
+		runeInst('-'),
 	})
 	codemap1.Next = []int{
 		1,
@@ -77,7 +77,7 @@ func TestCodeMapEqualsNotEqualOnLength(t *testing.T) {
 
 	codemap2 := NewCodeMap()
 	codemap2.Codes = InstructionsToCodes([]Instruction{
-		InstructionAdd,
+		runeInst('+'),
 	})
 	codemap2.Next = []int{
 		1,
@@ -91,8 +91,8 @@ func TestCodeMapEqualsNotEqualOnLength(t *testing.T) {
 func TestCodeMapEqualsNotEqualOnInstruction(t *testing.T) {
 	codemap1 := NewCodeMap()
 	codemap1.Codes = InstructionsToCodes([]Instruction{
-		InstructionAdd,
-		InstructionSub,
+		runeInst('+'),
+		runeInst('-'),
 	})
 	codemap1.Next = []int{
 		1,
@@ -101,8 +101,8 @@ func TestCodeMapEqualsNotEqualOnInstruction(t *testing.T) {
 
 	codemap2 := NewCodeMap()
 	codemap2.Codes = InstructionsToCodes([]Instruction{
-		InstructionAdd,
-		InstructionPointerDec,
+		runeInst('+'),
+		runeInst('<'),
 	})
 	codemap2.Next = []int{
 		1,
@@ -117,8 +117,8 @@ func TestCodeMapEqualsNotEqualOnInstruction(t *testing.T) {
 func TestCodeMapEqualsNotEqualOnNext(t *testing.T) {
 	codemap1 := NewCodeMap()
 	codemap1.Codes = InstructionsToCodes([]Instruction{
-		InstructionAdd,
-		InstructionSub,
+		runeInst('+'),
+		runeInst('-'),
 	})
 	codemap1.Next = []int{
 		1,
@@ -127,8 +127,8 @@ func TestCodeMapEqualsNotEqualOnNext(t *testing.T) {
 
 	codemap2 := NewCodeMap()
 	codemap2.Codes = InstructionsToCodes([]Instruction{
-		InstructionAdd,
-		InstructionSub,
+		runeInst('+'),
+		runeInst('-'),
 	})
 	codemap2.Next = []int{
 		1,
@@ -143,11 +143,11 @@ func TestCodeMapEqualsNotEqualOnNext(t *testing.T) {
 func TestCodeMapSnapshot(t *testing.T) {
 	codemap := NewCodeMap()
 	codemap.Codes = InstructionsToCodes([]Instruction{
-		InstructionAdd,
-		InstructionSub,
-		InstructionAdd,
-		InstructionPointerDec,
-		InstructionPointerInc,
+		runeInst('+'),
+		runeInst('-'),
+		runeInst('+'),
+		runeInst('<'),
+		runeInst('>'),
 	})
 	codemap.Next = []int{
 		1,
@@ -159,10 +159,10 @@ func TestCodeMapSnapshot(t *testing.T) {
 	{
 		snapshot := codemap.Snapshot(1, 1, 2)
 		expected := InstructionsToCodes([]Instruction{
-			InstructionAdd,
-			InstructionSub,
-			InstructionAdd,
-			InstructionPointerDec,
+			runeInst('+'),
+			runeInst('-'),
+			runeInst('+'),
+			runeInst('<'),
 		})
 
 		if !slices.Equal(snapshot, expected) {
@@ -173,9 +173,9 @@ func TestCodeMapSnapshot(t *testing.T) {
 	{
 		snapshot := codemap.Snapshot(0, 1, 2)
 		expected := InstructionsToCodes([]Instruction{
-			InstructionAdd,
-			InstructionSub,
-			InstructionAdd,
+			runeInst('+'),
+			runeInst('-'),
+			runeInst('+'),
 		})
 
 		if !slices.Equal(snapshot, expected) {

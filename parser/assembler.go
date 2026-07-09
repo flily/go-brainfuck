@@ -1,24 +1,24 @@
-package vm
+package parser
 
 import (
-	"github.com/flily/go-brainfuck/vm/utils"
+	"github.com/flily/go-brainfuck/infra"
 )
 
 type StackItem struct {
-	Code      *Code
+	Code      *infra.Code
 	CodeIndex int
 }
 
 type Assembler struct {
-	stack *utils.Stack[StackItem]
-	code  []Code
+	stack *Stack[StackItem]
+	code  []infra.Code
 	next  []int
 }
 
 func NewAssemblerWithCapacity(capacity int) *Assembler {
 	s := &Assembler{
-		stack: utils.NewStackWithCapacity[StackItem](capacity),
-		code:  make([]Code, 0, 32*capacity),
+		stack: NewStackWithCapacity[StackItem](capacity),
+		code:  make([]infra.Code, 0, 32*capacity),
 		next:  make([]int, 0, 32*capacity),
 	}
 
@@ -29,7 +29,7 @@ func NewAssembler() *Assembler {
 	return NewAssemblerWithCapacity(DefaultStackCapacity)
 }
 
-func (s *Assembler) Push(code *Code, codeIndex int) {
+func (s *Assembler) Push(code *infra.Code, codeIndex int) {
 	item := &StackItem{
 		Code:      code,
 		CodeIndex: codeIndex,
@@ -37,7 +37,7 @@ func (s *Assembler) Push(code *Code, codeIndex int) {
 	s.stack.Push(item)
 }
 
-func (s *Assembler) Pop() (*Code, int) {
+func (s *Assembler) Pop() (*infra.Code, int) {
 	item, ok := s.stack.Pop()
 	if !ok {
 		return nil, -1
@@ -46,15 +46,15 @@ func (s *Assembler) Pop() (*Code, int) {
 	return item.Code, item.CodeIndex
 }
 
-func (s *Assembler) AddCode(code *Code) bool {
+func (s *Assembler) AddCode(code *infra.Code) bool {
 	next := -1
 
 	result := true
 	switch code.Instruction {
-	case InstructionLoopBegin:
+	case infra.InstructionLoopBegin:
 		s.Push(code, len(s.code))
 
-	case InstructionLoopEnd:
+	case infra.InstructionLoopEnd:
 		_, beginIndex := s.Pop()
 		if beginIndex < 0 {
 			// ']' without matching '['
@@ -71,8 +71,8 @@ func (s *Assembler) AddCode(code *Code) bool {
 	return result
 }
 
-func (s *Assembler) Assemble() *CodeMap {
-	codemap := NewCodeMap()
+func (s *Assembler) Assemble() *infra.CodeMap {
+	codemap := infra.NewCodeMap()
 	codemap.Codes = s.code
 	codemap.Next = s.next
 

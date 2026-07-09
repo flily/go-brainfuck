@@ -2,68 +2,28 @@ package vm
 
 import (
 	"errors"
-	"slices"
 
-	"github.com/flily/go-brainfuck/context"
+	"github.com/flily/go-brainfuck/config"
+	"github.com/flily/go-brainfuck/infra"
 )
 
-type StandardInstruction rune
+type (
+	ConfigureContainer  = config.ConfigureContainer
+	StandardInstruction = infra.StandardInstruction
+)
 
 const (
-	InstructionAdd        StandardInstruction = '+'
-	InstructionSub        StandardInstruction = '-'
-	InstructionPointerDec StandardInstruction = '<'
-	InstructionPointerInc StandardInstruction = '>'
-	InstructionInput      StandardInstruction = ','
-	InstructionOutput     StandardInstruction = '.'
-	InstructionLoopBegin  StandardInstruction = '['
-	InstructionLoopEnd    StandardInstruction = ']'
+	InstructionAdd        = infra.InstructionAdd
+	InstructionSub        = infra.InstructionSub
+	InstructionPointerDec = infra.InstructionPointerDec
+	InstructionPointerInc = infra.InstructionPointerInc
+	InstructionInput      = infra.InstructionInput
+	InstructionOutput     = infra.InstructionOutput
+	InstructionLoopBegin  = infra.InstructionLoopBegin
+	InstructionLoopEnd    = infra.InstructionLoopEnd
 )
 
-func (i StandardInstruction) Char() rune {
-	return rune(i)
-}
-
-func (i StandardInstruction) String() string {
-	return string(i)
-}
-
-type StandardInstructionSet struct {
-	SupportedInstructions []rune
-}
-
-var standardInstructions = []rune{
-	rune(InstructionAdd),
-	rune(InstructionSub),
-	rune(InstructionPointerDec),
-	rune(InstructionPointerInc),
-	rune(InstructionInput),
-	rune(InstructionOutput),
-	rune(InstructionLoopBegin),
-	rune(InstructionLoopEnd),
-}
-
-func NewStandardInstructionSet() InstructionSet {
-	s := &StandardInstructionSet{
-		SupportedInstructions: standardInstructions,
-	}
-
-	return s
-}
-
-func (s *StandardInstructionSet) CheckInstruction(r rune, ctx *context.Context) *Code {
-	var result *Code = nil
-	if slices.Contains(s.SupportedInstructions, r) {
-		result = &Code{
-			Instruction: StandardInstruction(r),
-			Context:     ctx,
-		}
-	}
-
-	return result
-}
-
-func GetStandardInstructionSetHandlers[T MemoryUnit]() []InstructionHandlerEntry[T] {
+func GetStandardInstructionSetHandlers[T infra.MemoryUnit]() []InstructionHandlerEntry[T] {
 	handlers := []InstructionHandlerEntry[T]{
 		{Instruction: InstructionAdd, Handler: StandardHandlerAdd[T]},
 		{Instruction: InstructionSub, Handler: StandardHandlerSub[T]},
@@ -112,15 +72,15 @@ func StandardHandlerInput[T MemoryUnit](vm *VM[T], conf ConfigureContainer) erro
 			return err
 
 		} else {
-			if raiseErr, found := conf.GetBoolean(ConfigureReadEOFRaiseError); found && raiseErr {
+			if raiseErr, found := conf.GetBoolean(config.ConfigureReadEOFRaiseError); found && raiseErr {
 				return err
 			}
 
-			if ignoreEOF, found := conf.GetBoolean(ConfigureReadValueIgnoreOnEOF); found && ignoreEOF {
+			if ignoreEOF, found := conf.GetBoolean(config.ConfigureReadValueIgnoreOnEOF); found && ignoreEOF {
 				return nil
 			}
 
-			if valueOnEOF, found := conf.GetInt(ConfigureReadValueOnEOF); found {
+			if valueOnEOF, found := conf.GetInt(config.ConfigureReadValueOnEOF); found {
 				value = T(valueOnEOF)
 			}
 		}

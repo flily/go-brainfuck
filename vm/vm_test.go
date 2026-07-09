@@ -8,7 +8,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/flily/go-brainfuck/config"
 	"github.com/flily/go-brainfuck/context"
+	"github.com/flily/go-brainfuck/parser"
 )
 
 type nilWrite[T MemoryUnit] struct{}
@@ -44,7 +46,7 @@ func (c testVMCase[T]) Run(t *testing.T) {
 	t.Helper()
 
 	file := context.ReadFileString("test.bf", c.code)
-	parser := NewParser(file)
+	parser := parser.NewParser(file)
 	codemap, err := parser.Parse()
 	if err != nil {
 		t.Fatalf("error parsing code:\n%s", err)
@@ -162,8 +164,8 @@ func TestVMReadEOFNoConfigure(t *testing.T) {
 	testVMCase[uint8]{
 		code:  ",,,,",
 		input: NewBufferedInput[uint8](1, 2),
-		configure: GenericConfigure{
-			ConfigureReadEOFRaiseError: true,
+		configure: config.GenericConfigure{
+			config.ConfigureReadEOFRaiseError: true,
 		},
 		expectedData: []uint8{2},
 		expectedError: strings.Join([]string{
@@ -179,8 +181,8 @@ func TestVMReadEOFIgnore(t *testing.T) {
 	testVMCase[uint8]{
 		code:  ",,,,",
 		input: NewBufferedInput[uint8](1, 2),
-		configure: GenericConfigure{
-			ConfigureReadValueIgnoreOnEOF: true,
+		configure: config.GenericConfigure{
+			config.ConfigureReadValueIgnoreOnEOF: true,
 		},
 		expectedData: []uint8{2},
 	}.Run(t)
@@ -190,8 +192,8 @@ func TestVMReadEOFAsZero(t *testing.T) {
 	testVMCase[uint8]{
 		code:  ",,,,",
 		input: NewBufferedInput[uint8](1, 2),
-		configure: GenericConfigure{
-			ConfigureReadValueOnEOF: 0,
+		configure: config.GenericConfigure{
+			config.ConfigureReadValueOnEOF: 0,
 		},
 		expectedData: []uint8{0},
 	}.Run(t)
@@ -201,8 +203,8 @@ func TestVMReadEOFAsMinusOne(t *testing.T) {
 	testVMCase[uint8]{
 		code:  ",>,,,",
 		input: NewBufferedInput[uint8](1, 2),
-		configure: GenericConfigure{
-			ConfigureReadValueOnEOF: int64(-1),
+		configure: config.GenericConfigure{
+			config.ConfigureReadValueOnEOF: int64(-1),
 		},
 		expectedData: []uint8{
 			1, 0xff, 0, 0,

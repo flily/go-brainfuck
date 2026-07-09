@@ -1,4 +1,4 @@
-package vm
+package infra
 
 import (
 	"testing"
@@ -6,15 +6,25 @@ import (
 	"slices"
 )
 
+type runeInst rune
+
+func (r runeInst) Char() rune {
+	return rune(r)
+}
+
+func (r runeInst) String() string {
+	return string(r)
+}
+
 func TestConvertInstructionsFrom(t *testing.T) {
-	input := []StandardInstruction{
-		InstructionAdd,
-		InstructionSub,
+	input := []runeInst{
+		'+',
+		'-',
 	}
 
 	expected := []Instruction{
-		InstructionAdd,
-		InstructionSub,
+		runeInst('+'),
+		runeInst('-'),
 	}
 
 	got := ConvertInstructionsFrom(input)

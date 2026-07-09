@@ -1,11 +1,9 @@
-package utils
+package parser
 
 type Stack[T any] struct {
 	items []*T
 	index int
 }
-
-
 
 func NewStackWithCapacity[T any](capacity int) *Stack[T] {
 	s := &Stack[T]{

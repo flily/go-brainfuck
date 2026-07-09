@@ -1,4 +1,4 @@
-package vm
+package config
 
 import (
 	"testing"
@@ -13,6 +13,15 @@ func TestConfigureIsStandard(t *testing.T) {
 	c2 := Configure(0x00010203)
 	if !c2.IsStandard() {
 		t.Fatalf("expected c2 to be standard")
+	}
+}
+
+func TestGenericConfigureInterface(t *testing.T) {
+	gc := NewGenericConfigure()
+	var _ ConfigureContainer = gc
+
+	if len(gc) != 0 {
+		t.Fatalf("expected generic configure to be empty, got %d", len(gc))
 	}
 }
 

@@ -1,11 +1,11 @@
 package vm
 
 import (
-	"io"
 	"testing"
 
 	"bytes"
 	"errors"
+	"io"
 	"strings"
 
 	"github.com/flily/go-brainfuck/context"

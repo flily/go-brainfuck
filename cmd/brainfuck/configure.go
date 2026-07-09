@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/flily/go-brainfuck/vm"
+	"github.com/flily/go-brainfuck/config"
 )
 
 const (
@@ -77,14 +77,14 @@ func NewConfigure() *Configure {
 	return conf
 }
 
-func (c *Configure) GetBoolean(conf vm.Configure) (bool, bool) {
+func (c *Configure) GetBoolean(conf config.Configure) (bool, bool) {
 	result := false
 	found := true
 	switch conf {
-	case vm.ConfigureReadValueIgnoreOnEOF:
+	case config.ConfigureReadValueIgnoreOnEOF:
 		result = c.IgnoreReadEOF
 
-	case vm.ConfigureReadEOFRaiseError:
+	case config.ConfigureReadEOFRaiseError:
 		result = c.RaiseReadEOF
 
 	default:
@@ -94,11 +94,11 @@ func (c *Configure) GetBoolean(conf vm.Configure) (bool, bool) {
 	return result, found
 }
 
-func (c *Configure) GetInt(conf vm.Configure) (int64, bool) {
+func (c *Configure) GetInt(conf config.Configure) (int64, bool) {
 	result := int64(0)
 	found := true
 	switch conf {
-	case vm.ConfigureReadValueOnEOF:
+	case config.ConfigureReadValueOnEOF:
 		result = c.ReadValueOnEOF
 
 	default:
@@ -108,7 +108,7 @@ func (c *Configure) GetInt(conf vm.Configure) (int64, bool) {
 	return result, found
 }
 
-func (c *Configure) GetUint(conf vm.Configure) (uint64, bool) {
+func (c *Configure) GetUint(conf config.Configure) (uint64, bool) {
 	result := uint64(0)
 	found := true
 	switch conf {
