@@ -7,9 +7,8 @@ import (
 
 	"github.com/flily/go-brainfuck/config"
 	"github.com/flily/go-brainfuck/infra"
+	"github.com/flily/go-brainfuck/iofmt"
 )
-
-
 
 type (
 	MemoryUnit     = infra.MemoryUnit
@@ -49,19 +48,18 @@ type InstructionHandlerEntry[T MemoryUnit] struct {
 }
 
 type VM[T MemoryUnit] struct {
-	Memory      []T
-	Code        *CodeMap
-	IPStack     []int
-	Input       Reader[T]
-	Output      Writer[T]
-	Configure   config.ConfigureContainer
-	MemorySize  int
-	StackSize   int
-	IP          int // Instruction Pointer
-	DP          int // Data Pointer
-	SP          int // Stack Pointer
-	handlers    map[Instruction]InstructionHandler[T]
-	currentCode *Code
+	Memory     []T
+	Code       *CodeMap
+	IPStack    []int
+	Input      iofmt.Reader[T]
+	Output     iofmt.Writer[T]
+	Configure  config.ConfigureContainer
+	MemorySize int
+	StackSize  int
+	IP         int // Instruction Pointer
+	DP         int // Data Pointer
+	SP         int // Stack Pointer
+	handlers   map[Instruction]InstructionHandler[T]
 }
 
 func New[T MemoryUnit](memorySize int, stackSize int) *VM[T] {
@@ -104,18 +102,22 @@ func (m *VM[T]) LoadData(data []T) *VM[T] {
 	return m
 }
 
+func (m *VM[T]) Registers() (int, int, int) {
+	return m.IP, m.DP, m.SP
+}
+
 func (m *VM[T]) Reset() {
 	m.DP = 0
 	m.SP = 0
 	m.IP = 0
 }
 
-func (m *VM[T]) SetInput(input Reader[T]) *VM[T] {
+func (m *VM[T]) SetInput(input iofmt.Reader[T]) *VM[T] {
 	m.Input = input
 	return m
 }
 
-func (m *VM[T]) SetOutput(output Writer[T]) *VM[T] {
+func (m *VM[T]) SetOutput(output iofmt.Writer[T]) *VM[T] {
 	m.Output = output
 	return m
 }
@@ -126,12 +128,16 @@ func (m *VM[T]) fetchCode(ip int) *Code {
 	}
 
 	current := &(m.Code.Codes[ip])
-	m.currentCode = current
 	return current
 }
 
 func (m *VM[T]) GetCurrentCode() *Code {
-	return m.currentCode
+	ip := m.IP
+	if ip < 0 || ip >= len(m.Code.Codes) {
+		return nil
+	}
+
+	return &m.Code.Codes[m.IP]
 }
 
 func (m *VM[T]) ExecuteInstruction(code *Code, conf config.ConfigureContainer) error {
@@ -139,7 +145,7 @@ func (m *VM[T]) ExecuteInstruction(code *Code, conf config.ConfigureContainer) e
 	if !ok {
 		err := ReasonUnsupportedInstruction.
 			OnFatal(code.Context, "").
-			With("instruction=%c (%x)", code.Instruction, code.Instruction)
+			With("instruction='%c' (0x%x)", code.Instruction, code.Instruction)
 		return err
 	}
 
@@ -175,16 +181,26 @@ func (m *VM[T]) PopIP() (int, error) {
 	return n, nil
 }
 
-func (m *VM[T]) UseIP() error {
+func (m *VM[T]) PeekIP() (int, error) {
 	if m.SP <= 0 {
 		code := m.GetCurrentCode()
 		err := ReasonCallStackEmpty.
 			OnFatal(code.Context, "call stack is empty").
 			With("SP=%d", m.SP)
+		return -1, err
+	}
+
+	value := m.IPStack[m.SP-1]
+	return value, nil
+}
+
+func (m *VM[T]) UseIP() error {
+	value, err := m.PeekIP()
+	if err != nil {
 		return err
 	}
 
-	m.IP = m.IPStack[m.SP-1]
+	m.IP = value
 	return nil
 }
 

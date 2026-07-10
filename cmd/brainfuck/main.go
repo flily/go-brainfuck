@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/flily/go-brainfuck/context"
+	"github.com/flily/go-brainfuck/iofmt"
 	"github.com/flily/go-brainfuck/parser"
 	"github.com/flily/go-brainfuck/vm"
 )
@@ -24,8 +25,6 @@ func GenericMain[T vm.MemoryUnit](conf *Configure, source string) {
 		return
 	}
 
-	fmt.Fprintf(os.Stderr, "configure: %+v\n", conf)
-
 	memorySize, stackSize := int(conf.MemorySize), int(conf.StackSize)
 	if conf.MemorySize > uint64(memorySize) {
 		fmt.Printf("warning: memory size too large, using %d\n", memorySize)
@@ -36,8 +35,8 @@ func GenericMain[T vm.MemoryUnit](conf *Configure, source string) {
 	}
 
 	bfvm := vm.New[T](memorySize, stackSize)
-	bfvm.Input = vm.NewReader(os.Stdin, vm.NewLittleEndianEncoder[T]())
-	bfvm.Output = vm.NewWriter(os.Stdout, vm.NewLittleEndianEncoder[T]())
+	bfvm.Input = iofmt.NewReader(os.Stdin, iofmt.NewLittleEndianEncoder[T]())
+	bfvm.Output = iofmt.NewWriter(os.Stdout, iofmt.NewLittleEndianEncoder[T]())
 	bfvm.Configure = conf
 	bfvm.LoadHandlers(vm.GetStandardInstructionSetHandlers[T]())
 	bfvm.LoadCode(codemap)
@@ -52,8 +51,8 @@ func makeArgumentParser() (*Configure, *flag.FlagSet) {
 	conf := NewConfigure()
 
 	set := flag.NewFlagSet("brainfuck", flag.ExitOnError)
-	set.Var(&conf.MemoryUnitType, "unit-type",
-		"data type for memory unit cell")
+	set.Var(&conf.MemoryUnitType, "word",
+		"data type of memory unit cell, one of int[8/16/32/64] or uint[8/16/32/64]")
 	set.Int64Var(&conf.ReadValueOnEOF, "eof-value", -1,
 		"value returned when meets EOF")
 	set.BoolVar(&conf.IgnoreReadEOF, "ignore-eof", false,
@@ -70,8 +69,9 @@ func main() {
 	_ = set.Parse(rawArgs)
 	args := set.Args()
 
-	if len(args) <= 0 {
-		fmt.Printf("no args\n")
+	if len(args) <= 0 || len(args) > 1 {
+		fmt.Printf("brainfuck [ARGS...] source")
+		set.Usage()
 		return
 	}
 

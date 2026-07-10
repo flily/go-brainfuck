@@ -2,282 +2,114 @@ package vm
 
 import (
 	"testing"
-	"testing/iotest"
 
-	"errors"
-	"slices"
 	"strings"
 
-	"github.com/flily/go-brainfuck/config"
-	"github.com/flily/go-brainfuck/context"
-	"github.com/flily/go-brainfuck/parser"
+	"github.com/flily/go-brainfuck/infra"
 )
 
-type nilWrite[T MemoryUnit] struct{}
+func newSimpleCodeMap(insts ...Instruction) *CodeMap {
+	codemap := infra.NewCodeMap()
+	codemap.Codes = infra.InstructionsToCodes(insts)
 
-func (w *nilWrite[T]) Write(p T) (err error) {
-	return errors.New("write error")
+	return codemap
 }
 
-func newNilWriter[T MemoryUnit]() Writer[T] {
-	return &nilWrite[T]{}
-}
+func TestVMBasicMethods(t *testing.T) {
+	m := New[uint8](32, 32)
+	m.LoadCode(newSimpleCodeMap(InstructionAdd, InstructionAdd, InstructionAdd))
 
-type testVMCase[T MemoryUnit] struct {
-	code               string
-	data               []T
-	input              Reader[T]
-	output             Writer[T]
-	configure          ConfigureContainer
-	memorySize         int
-	stackSize          int
-	expectedData       []T
-	expectedDataOffset int
-	expectedOutput     []T
-	expectedError      string
-}
+	ip1, dp1, sp1 := m.Registers()
+	if ip1 != 0 || dp1 != 0 || sp1 != 0 {
+		t.Fatalf("expected registers to be (0, 0, 0), got (%d, %d, %d)", ip1, dp1, sp1)
+	}
 
-const (
-	minMemorySize = 32
-	minStackSize  = 32
-)
+	peekIP, err := m.PeekIP()
+	if err == nil {
+		t.Fatalf("expected error when peeking IP with empty stack, got nil")
+	}
 
-func (c testVMCase[T]) Run(t *testing.T) {
-	t.Helper()
+	if peekIP != -1 {
+		t.Fatalf("expected peekIP to be -1 when stack is empty, got %d", peekIP)
+	}
 
-	file := context.ReadFileString("test.bf", c.code)
-	parser := parser.NewParser(file)
-	codemap, err := parser.Parse()
+	m.IP = 2
+	if err := m.PushIP(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if m.SP != 1 {
+		t.Fatalf("expected SP to be 1 after PushIP, got %d", m.SP)
+	}
+
+	peekIP, err = m.PeekIP()
 	if err != nil {
-		t.Fatalf("error parsing code:\n%s", err)
+		t.Fatalf("unexpected error when peeking IP: %v", err)
 	}
 
-	memorySize := max(c.memorySize, minMemorySize)
-	stackSize := max(c.stackSize, minStackSize)
-	vm := New[T](memorySize, stackSize)
+	if peekIP != 2 {
+		t.Fatalf("expected peekIP to be 2, got %d", peekIP)
+	}
+
+	m.Reset()
+	peekIP, err = m.PeekIP()
+	if err == nil {
+		t.Fatalf("expected error when peeking IP after reset, got nil")
+	}
+
+	if peekIP != -1 {
+		t.Fatalf("expected peekIP to be -1 after reset, got %d", peekIP)
+	}
+}
+
+func TestVMGetCurrentCodeOnErrorState(t *testing.T) {
+	m := New[uint8](32, 32)
+	m.LoadCode(newSimpleCodeMap(InstructionAdd, InstructionAdd, InstructionAdd))
+
+	peekIP, err := m.PeekIP()
+	if err == nil {
+		t.Fatalf("expected error when peeking IP with empty stack, got nil")
+	}
+
+	if peekIP != -1 {
+		t.Fatalf("expected peekIP to be -1 when stack is empty, got %d", peekIP)
+	}
+
+	m.IP = -100
+	code := m.GetCurrentCode()
+	if code != nil {
+		t.Fatalf("expected GetCurrentCode to return nil for invalid IP, got %v", code)
+	}
+
+	m.IP = 100
+	code = m.GetCurrentCode()
+	if code != nil {
+		t.Fatalf("expected GetCurrentCode to return nil for invalid IP, got %v", code)
+	}
+}
+
+func TestVMExecuteInstructionNotInSet(t *testing.T) {
+	code := "+++"
+	codemap, err := parseCodeLiteral(code, "test.bf")
+	if err != nil {
+		t.Fatalf("error parsing code: %v", err)
+	}
+
+	vm := New[uint8](32, 32)
 	vm.LoadCode(codemap)
-	vm.LoadData(c.data)
-	if c.configure != nil {
-		vm.Configure = c.configure
-	}
-
-	vm.SetInput(c.input)
-
-	output := c.output
-	if output == nil {
-		if c.output == nil {
-			output = NewBufferedWriter[T](0)
-		}
-	} else if _, ok := c.output.(*nilWrite[T]); ok {
-		output = nil
-	}
-	vm.SetOutput(output)
-
-	vm.LoadHandlers(GetStandardInstructionSetHandlers[T]())
 
 	err = vm.Run()
-	if err != nil {
-		if len(c.expectedError) > 0 {
-			if err.Error() != c.expectedError {
-				t.Fatalf("expected error:\n%s\n got:\n%s", c.expectedError, err)
-			}
-		} else {
-			t.Fatalf("error running code:\n%s", err)
-		}
-	} else {
-		if len(c.expectedError) > 0 {
-			t.Fatalf("expected error but got no error")
-		}
+	if err == nil {
+		t.Fatalf("expected error when executing instruction not in set, got nil")
 	}
 
-	start := c.expectedDataOffset
-	memorySlices := vm.Memory[start : start+len(c.expectedData)]
-	if !slices.Equal(memorySlices, c.expectedData) {
-		t.Errorf("expected: %v", c.expectedData)
-		t.Errorf("got:      %v", memorySlices)
-		t.Fatalf("memory mismatch")
+	expected := strings.Join([]string{
+		"test.bf:1:1: fatal: unsupported instruction",
+		"    1 | +++",
+		"      | ^",
+		"      | instruction='+' (0x2b)",
+	}, "\n")
+	if err.Error() != expected {
+		t.Fatalf("error message mismatch, expected:\n%s\ngot:\n%s", expected, err.Error())
 	}
-
-	dumpable, ok := output.(DumpableWriter[T])
-	if ok {
-		outputData := dumpable.Dump()
-		if !slices.Equal(outputData, c.expectedOutput) {
-			t.Errorf("expected: %v", c.expectedOutput)
-			t.Errorf("got:      %v", outputData)
-			t.Fatalf("output mismatch")
-		}
-	}
-}
-
-func TestVMSimpleCodeAddSub(t *testing.T) {
-	testVMCase[uint8]{
-		code:         "+++--",
-		expectedData: []uint8{1},
-	}.Run(t)
-}
-
-func TestVMSimpleIO(t *testing.T) {
-	testVMCase[uint8]{
-		code:           ",+.",
-		input:          NewBufferedInput[uint8](41),
-		expectedOutput: []uint8{42},
-	}.Run(t)
-}
-
-func TestVMSimpleLoop(t *testing.T) {
-	testVMCase[uint8]{
-		code:         "[-]",
-		data:         []uint8{42},
-		expectedData: []uint8{0},
-	}.Run(t)
-}
-
-func TestVMCleanMemory(t *testing.T) {
-	testVMCase[uint8]{
-		code: "[[-]>]",
-		data: []uint8{
-			1, 2, 3, 4, 5, 6,
-		},
-		expectedData: []uint8{
-			0, 0, 0, 0, 0, 0,
-		},
-	}.Run(t)
-}
-
-func TestVMHelloWorld(t *testing.T) {
-	testVMCase[uint8]{
-		code: strings.Join([]string{
-			"++++++++++[>+++",
-			"++++>+++++++++ ",
-			"+>+++>+<<<<-]>+",
-			"+.>+.+++++++..+",
-			"++.>++.<<++++++",
-			"+++++++++.>.++ ",
-			"+.------.------",
-			"--.>+.>.",
-		}, ""),
-		expectedOutput: []uint8("Hello World!\n"),
-	}.Run(t)
-}
-
-func TestVMReadEOFNoConfigure(t *testing.T) {
-	testVMCase[uint8]{
-		code:  ",,,,",
-		input: NewBufferedInput[uint8](1, 2),
-		configure: config.GenericConfigure{
-			config.ConfigureReadEOFRaiseError: true,
-		},
-		expectedData: []uint8{2},
-		expectedError: strings.Join([]string{
-			"test.bf:1:3: fatal: read EOF",
-			"    1 | ,,,,",
-			"      |   ^",
-			"      |   no more data to read",
-		}, "\n"),
-	}.Run(t)
-}
-
-func TestVMReadEOFIgnore(t *testing.T) {
-	testVMCase[uint8]{
-		code:  ",,,,",
-		input: NewBufferedInput[uint8](1, 2),
-		configure: config.GenericConfigure{
-			config.ConfigureReadValueIgnoreOnEOF: true,
-		},
-		expectedData: []uint8{2},
-	}.Run(t)
-}
-
-func TestVMReadEOFAsZero(t *testing.T) {
-	testVMCase[uint8]{
-		code:  ",,,,",
-		input: NewBufferedInput[uint8](1, 2),
-		configure: config.GenericConfigure{
-			config.ConfigureReadValueOnEOF: 0,
-		},
-		expectedData: []uint8{0},
-	}.Run(t)
-}
-
-func TestVMReadEOFAsMinusOne(t *testing.T) {
-	testVMCase[uint8]{
-		code:  ",>,,,",
-		input: NewBufferedInput[uint8](1, 2),
-		configure: config.GenericConfigure{
-			config.ConfigureReadValueOnEOF: int64(-1),
-		},
-		expectedData: []uint8{
-			1, 0xff, 0, 0,
-		},
-	}.Run(t)
-}
-
-func TestVMReadError(t *testing.T) {
-	err := errors.New("read error")
-
-	testVMCase[uint8]{
-		code:  "++++,.,.",
-		input: NewReader(iotest.ErrReader(err), NewEncoderLE[uint8]()),
-		expectedError: strings.Join([]string{
-			"test.bf:1:5: fatal: read error: read error",
-			"    1 | ++++,.,.",
-			"      |     ^",
-			"      |     read from input failed",
-		}, "\n"),
-		expectedData: []uint8{
-			4, 0, 0, 0,
-		},
-	}.Run(t)
-}
-
-func TestVMReadOnNilDevice(t *testing.T) {
-	testVMCase[uint8]{
-		code: "++++,.,.",
-		expectedError: strings.Join([]string{
-			"test.bf:1:5: fatal: no input device specified",
-			"    1 | ++++,.,.",
-			"      |     ^",
-			"      |     read from input failed",
-		}, "\n"),
-		expectedData: []uint8{
-			4, 0, 0, 0,
-		},
-	}.Run(t)
-}
-
-func TestVMWriteError(t *testing.T) {
-	err := errors.New("write error")
-
-	testVMCase[uint8]{
-		code:   "++++..",
-		output: NewWriter(newErrWriter(err), NewEncoderLE[uint8]()),
-		expectedError: strings.Join([]string{
-			"test.bf:1:5: fatal: write error: write error",
-			"    1 | ++++..",
-			"      |     ^",
-			"      |     write to output failed",
-		}, "\n"),
-		expectedData: []uint8{
-			4, 0, 0, 0,
-		},
-		expectedOutput: []uint8{},
-	}.Run(t)
-}
-
-func TestVMWriteOnNilDevice(t *testing.T) {
-	testVMCase[uint8]{
-		code:   "++++..",
-		output: newNilWriter[uint8](),
-		expectedError: strings.Join([]string{
-			"test.bf:1:5: fatal: no output device specified",
-			"    1 | ++++..",
-			"      |     ^",
-			"      |     write to output failed",
-		}, "\n"),
-
-		expectedData: []uint8{
-			4, 0, 0, 0,
-		},
-		expectedOutput: []uint8{},
-	}.Run(t)
 }
