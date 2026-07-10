@@ -111,10 +111,10 @@ func (c *Configure) GetInt(conf config.Configure) (int64, bool) {
 func (c *Configure) GetUint(conf config.Configure) (uint64, bool) {
 	result := uint64(0)
 	found := true
-	switch conf {
-	default:
-		found = false
-	}
+	// switch conf {
+	// default:
+	// 	found = false
+	// }
 
 	return result, found
 }
