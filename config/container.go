@@ -1,17 +1,14 @@
-package main
+package config
 
 import (
 	"fmt"
-
-	"github.com/flily/go-brainfuck/config"
+	"strings"
 )
 
-const (
-	DefaultMemorySize = 4 * 1024
-	DefaultStackSize  = 128
+type (
+	MemoryUnitType int
+	Endian         int
 )
-
-type MemoryUnitType int
 
 const (
 	MemoryUnitTypeInvalid MemoryUnitType = iota
@@ -23,6 +20,9 @@ const (
 	MemoryUnitTypeInt16
 	MemoryUnitTypeInt32
 	MemoryUnitTypeInt64
+
+	EndianLittle Endian = 0
+	EndianBig    Endian = 1
 )
 
 var memoryUnitTypeText = map[MemoryUnitType]string{
@@ -45,8 +45,9 @@ func (t *MemoryUnitType) String() string {
 }
 
 func (t *MemoryUnitType) Set(value string) error {
+	lower := strings.ToLower(value)
 	for k, v := range memoryUnitTypeText {
-		if v == value {
+		if v == lower {
 			*t = k
 			return nil
 		}
@@ -55,20 +56,49 @@ func (t *MemoryUnitType) Set(value string) error {
 	return fmt.Errorf("invalid memory unit type '%s'", value)
 }
 
-type Configure struct {
+func (e *Endian) String() string {
+	switch *e {
+	case EndianBig:
+		return "big-endian"
+	case EndianLittle:
+		return "little-endian"
+	default:
+		return "unknown"
+	}
+}
+
+func (e *Endian) Set(value string) error {
+	v := strings.ToLower(value)
+	switch v {
+	case "big", "be", "big-endian", "bigendian", "b":
+		*e = EndianBig
+	case "little", "le", "little-endian", "littleendian", "l":
+		*e = EndianLittle
+	default:
+		return fmt.Errorf("invalid endian type '%s'", value)
+	}
+
+	return nil
+}
+
+type Container struct {
 	MemoryUnitType MemoryUnitType
 	MemorySize     uint64
 	StackSize      uint64
+	Endian         Endian
+	InputFilename  string
+	OutputFilename string
 	ReadValueOnEOF int64
 	IgnoreReadEOF  bool
 	RaiseReadEOF   bool
 }
 
-func NewConfigure() *Configure {
-	conf := &Configure{
+func NewContainer(memorySize uint64, stackSize uint64) *Container {
+	conf := &Container{
 		MemoryUnitType: MemoryUnitTypeUint8,
-		MemorySize:     DefaultMemorySize,
-		StackSize:      DefaultStackSize,
+		MemorySize:     memorySize,
+		StackSize:      stackSize,
+		Endian:         EndianLittle,
 		ReadValueOnEOF: -1,
 		IgnoreReadEOF:  false,
 		RaiseReadEOF:   false,
@@ -77,14 +107,14 @@ func NewConfigure() *Configure {
 	return conf
 }
 
-func (c *Configure) GetBoolean(conf config.Configure) (bool, bool) {
+func (c *Container) GetBoolean(conf Configure) (bool, bool) {
 	result := false
 	found := true
 	switch conf {
-	case config.ConfigureReadValueIgnoreOnEOF:
+	case ConfigureReadValueIgnoreOnEOF:
 		result = c.IgnoreReadEOF
 
-	case config.ConfigureReadEOFRaiseError:
+	case ConfigureReadEOFRaiseError:
 		result = c.RaiseReadEOF
 
 	default:
@@ -94,11 +124,11 @@ func (c *Configure) GetBoolean(conf config.Configure) (bool, bool) {
 	return result, found
 }
 
-func (c *Configure) GetInt(conf config.Configure) (int64, bool) {
+func (c *Container) GetInt(conf Configure) (int64, bool) {
 	result := int64(0)
 	found := true
 	switch conf {
-	case config.ConfigureReadValueOnEOF:
+	case ConfigureReadValueOnEOF:
 		result = c.ReadValueOnEOF
 
 	default:
@@ -108,7 +138,7 @@ func (c *Configure) GetInt(conf config.Configure) (int64, bool) {
 	return result, found
 }
 
-func (c *Configure) GetUint(conf config.Configure) (uint64, bool) {
+func (c *Container) GetUint(conf Configure) (uint64, bool) {
 	result := uint64(0)
 	found := true
 	// switch conf {
