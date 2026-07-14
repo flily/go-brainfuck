@@ -9,32 +9,34 @@ import (
 )
 
 type testTokenizerCase struct {
-	t     *testing.T
-	input string
+	t         *testing.T
+	input     string
+	tokenizer *Tokenizer
 }
 
 func newTokenizerCase(t *testing.T, input string) *testTokenizerCase {
+	file := context.ReadFileString("test.txt", input)
+	tokenizer := NewTokenizer(file)
+
 	c := &testTokenizerCase{
-		t:     t,
-		input: input,
+		t:         t,
+		input:     input,
+		tokenizer: tokenizer,
 	}
 
 	return c
 }
 
 func (t *testTokenizerCase) scan() (*Element, error) {
-	file := context.ReadFileString("test.txt", t.input)
-	tokenizer := NewTokenizer(file)
-	elem, err := tokenizer.Next()
-
+	elem, err := t.tokenizer.Next()
 	return elem, err
 }
 
-func (t *testTokenizerCase) Ok(token Token, content string, position string) {
+func (t *testTokenizerCase) FindOk(token Token, content string, position string) *testTokenizerCase {
 	elem, err := t.scan()
 	if err != nil {
 		t.t.Fatalf("expect scan token without error, got:\n%s", err)
-		return
+		return t
 	}
 
 	ctx := elem.Context
@@ -54,39 +56,61 @@ func (t *testTokenizerCase) Ok(token Token, content string, position string) {
 	if p != position {
 		t.t.Fatalf("got wrong position, expect\n%s\ngot\n%s", position, p)
 	}
+
+	return t
 }
 
 func TestTokenizerScanIdentifier(t *testing.T) {
 	input := "lorem ipsum"
-	position := strings.Join([]string{
+	position1 := strings.Join([]string{
 		"    1 | lorem ipsum",
 		"      | ^^^^^",
 		"      | here",
 	}, "\n")
 
+	position2 := strings.Join([]string{
+		"    1 | lorem ipsum",
+		"      |       ^^^^^",
+		"      |       here",
+	}, "\n")
+
 	newTokenizerCase(t, input).
-		Ok(TokenIdentifier, "lorem", position)
+		FindOk(TokenIdentifier, "lorem", position1).
+		FindOk(TokenIdentifier, "ipsum", position2)
 }
 
 func TestTokenizerScanBoolean(t *testing.T) {
 	input := "false ipsum"
-	position := strings.Join([]string{
+	position1 := strings.Join([]string{
 		"    1 | false ipsum",
 		"      | ^^^^^",
 		"      | here",
 	}, "\n")
+	position2 := strings.Join([]string{
+		"    1 | false ipsum",
+		"      |       ^^^^^",
+		"      |       here",
+	}, "\n")
 
 	newTokenizerCase(t, input).
-		Ok(TokenBoolean, "false", position)
+		FindOk(TokenBoolean, "false", position1).
+		FindOk(TokenIdentifier, "ipsum", position2)
 }
 
 func TestTokenizerScanUnsignedNumber(t *testing.T) {
 	input := "42 ipsum"
-	position := strings.Join([]string{
+	position1 := strings.Join([]string{
 		"    1 | 42 ipsum",
 		"      | ^^",
 		"      | here",
 	}, "\n")
+	position2 := strings.Join([]string{
+		"    1 | 42 ipsum",
+		"      |    ^^^^^",
+		"      |    here",
+	}, "\n")
+
 	newTokenizerCase(t, input).
-		Ok(TokenUint, "42", position)
+		FindOk(TokenUint, "42", position1).
+		FindOk(TokenIdentifier, "ipsum", position2)
 }
