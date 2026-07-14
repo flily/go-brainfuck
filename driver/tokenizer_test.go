@@ -79,3 +79,14 @@ func TestTokenizerScanBoolean(t *testing.T) {
 	newTokenizerCase(t, input).
 		Ok(TokenBoolean, "false", position)
 }
+
+func TestTokenizerScanUnsignedNumber(t *testing.T) {
+	input := "42 ipsum"
+	position := strings.Join([]string{
+		"    1 | 42 ipsum",
+		"      | ^^",
+		"      | here",
+	}, "\n")
+	newTokenizerCase(t, input).
+		Ok(TokenUint, "42", position)
+}

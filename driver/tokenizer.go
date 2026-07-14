@@ -121,11 +121,16 @@ func (t *Tokenizer) scanUnsignedNumber() *Element {
 			break
 		}
 
+		found := false
 		switch {
 		case '0' <= r && r <= '9':
 		case r == '_':
 
 		default:
+			found = true
+		}
+
+		if found {
 			break
 		}
 
