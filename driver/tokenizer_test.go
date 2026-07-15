@@ -67,16 +67,21 @@ func TestTokenizerScanIdentifier(t *testing.T) {
 		"      | ^^^^^",
 		"      | here",
 	}, "\n")
-
 	position2 := strings.Join([]string{
 		"    1 | lorem ipsum",
 		"      |       ^^^^^",
 		"      |       here",
 	}, "\n")
+	position3 := strings.Join([]string{
+		"    1 | lorem ipsum<EOF>",
+		"      |            ^^^^^",
+		"      |            here",
+	}, "\n")
 
 	newTokenizerCase(t, input).
 		FindOk(TokenIdentifier, "lorem", position1).
-		FindOk(TokenIdentifier, "ipsum", position2)
+		FindOk(TokenIdentifier, "ipsum", position2).
+		FindOk(TokenEOF, "", position3)
 }
 
 func TestTokenizerScanBoolean(t *testing.T) {
@@ -91,10 +96,16 @@ func TestTokenizerScanBoolean(t *testing.T) {
 		"      |       ^^^^^",
 		"      |       here",
 	}, "\n")
+	position3 := strings.Join([]string{
+		"    1 | false ipsum<EOF>",
+		"      |            ^^^^^",
+		"      |            here",
+	}, "\n")
 
 	newTokenizerCase(t, input).
 		FindOk(TokenBoolean, "false", position1).
-		FindOk(TokenIdentifier, "ipsum", position2)
+		FindOk(TokenIdentifier, "ipsum", position2).
+		FindOk(TokenEOF, "", position3)
 }
 
 func TestTokenizerScanUnsignedNumber(t *testing.T) {
@@ -109,8 +120,14 @@ func TestTokenizerScanUnsignedNumber(t *testing.T) {
 		"      |    ^^^^^",
 		"      |    here",
 	}, "\n")
+	position3 := strings.Join([]string{
+		"    1 | 42 ipsum<EOF>",
+		"      |         ^^^^^",
+		"      |         here",
+	}, "\n")
 
 	newTokenizerCase(t, input).
 		FindOk(TokenUint, "42", position1).
-		FindOk(TokenIdentifier, "ipsum", position2)
+		FindOk(TokenIdentifier, "ipsum", position2).
+		FindOk(TokenEOF, "", position3)
 }
