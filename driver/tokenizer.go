@@ -44,18 +44,25 @@ var booleanWords = []string{
 }
 
 type Element struct {
-	Token   Token
-	Content string
-	Context *context.Context
+	Token         Token
+	ValueNegative bool
+	ValueUint     uint64
+	ValueString   string
+	Context       *context.Context
 }
 
 func NewElement(token Token, content string, ctx *context.Context) *Element {
 	e := &Element{
-		Token:   token,
-		Content: content,
-		Context: ctx,
+		Token:       token,
+		ValueString: content,
+		Context:     ctx,
 	}
 
+	return e
+}
+
+func (e *Element) Uint(v uint64) *Element {
+	e.ValueUint = v
 	return e
 }
 
@@ -73,9 +80,9 @@ func NewTokenizer(file *context.FileContext) *Tokenizer {
 	return t
 }
 
-func (t *Tokenizer) scanIdentifier(token Token) *Element {
+func (t *Tokenizer) scanIdentifier(token Token, startIndex int) *Element {
 	start := t.cursor.State()
-	i := 0
+	i := startIndex
 	for {
 		r, eol, eof := t.cursor.Peek(i)
 		if eol || eof {
@@ -114,6 +121,8 @@ func (t *Tokenizer) scanIdentifier(token Token) *Element {
 
 func (t *Tokenizer) scanUnsignedNumber() *Element {
 	start := t.cursor.State()
+
+	value := uint64(0)
 	i := 0
 	for {
 		r, eol, eof := t.cursor.Peek(i)
@@ -124,6 +133,8 @@ func (t *Tokenizer) scanUnsignedNumber() *Element {
 		found := false
 		switch {
 		case '0' <= r && r <= '9':
+			value = value*10 + uint64(r-'0')
+
 		case r == '_':
 
 		default:
@@ -141,7 +152,114 @@ func (t *Tokenizer) scanUnsignedNumber() *Element {
 	t.cursor.SetState(finish)
 
 	content, ctx := t.cursor.FinishWith(start, finish)
-	return NewElement(TokenUint, content, ctx)
+	return NewElement(TokenUint, content, ctx).Uint(value)
+}
+
+func (t *Tokenizer) scanHexadecimalNumber(startIndex int) *Element {
+	start := t.cursor.State()
+
+	value := uint64(0)
+	i := startIndex
+	for {
+		r, eol, eof := t.cursor.Peek(i)
+		if eol || eof {
+			break
+		}
+
+		found := false
+		switch {
+		case '0' <= r && r <= '9':
+			value <<= 4
+			value += uint64(r - '0')
+
+		case 'a' <= r && r <= 'f':
+			value <<= 4
+			value += uint64(r - 'a' + 10)
+
+		case 'A' <= r && r <= 'F':
+			value <<= 4
+			value += uint64(r - 'A' + 10)
+
+		case r == '_':
+
+		default:
+			found = true
+		}
+
+		if found {
+			break
+		}
+
+		i++
+	}
+
+	finish := t.cursor.PeekState(i)
+	t.cursor.SetState(finish)
+
+	content, ctx := t.cursor.FinishWith(start, finish)
+	return NewElement(TokenUint, content, ctx).Uint(value)
+}
+
+func (t *Tokenizer) scanOctalNumber(startIndex int) *Element {
+	start := t.cursor.State()
+
+	value := uint64(0)
+	i := startIndex
+	for {
+		r, eol, eof := t.cursor.Peek(i)
+		if eol || eof {
+			break
+		}
+
+		found := false
+		switch {
+		case '0' <= r && r <= '7':
+			value <<= 3
+			value += uint64(r - '0')
+
+		case r == '_':
+
+		default:
+			found = true
+		}
+
+		if found {
+			break
+		}
+
+		i++
+	}
+
+	finish := t.cursor.PeekState(i)
+	t.cursor.SetState(finish)
+
+	content, ctx := t.cursor.FinishWith(start, finish)
+	return NewElement(TokenUint, content, ctx).Uint(value)
+}
+
+func (t *Tokenizer) scanSignedInteger() *Element {
+	return nil
+}
+
+func (t *Tokenizer) scanNumber() *Element {
+	r0, _, _ := t.cursor.Rune()
+	if r0 != '0' {
+		return t.scanUnsignedNumber()
+	}
+
+	r1, eol, eof := t.cursor.Peek(1)
+	if eol || eof {
+		return t.scanUnsignedNumber()
+	}
+
+	switch r1 {
+	case 'x', 'X':
+		return t.scanHexadecimalNumber(2)
+	case '1', '2', '3', '4', '5', '6', '7':
+		return t.scanOctalNumber(1)
+	}
+
+	return nil
 }
 
 func (t *Tokenizer) Next() (*Element, error) {
@@ -155,10 +273,10 @@ func (t *Tokenizer) Next() (*Element, error) {
 	r, _ := t.cursor.CurrentChar()
 	switch {
 	case ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') || r == '_':
-		result = t.scanIdentifier(TokenIdentifier)
+		result = t.scanIdentifier(TokenIdentifier, 0)
 
 	case '0' <= r && r <= '9':
-		result = t.scanUnsignedNumber()
+		result = t.scanNumber()
 
 	}
 
