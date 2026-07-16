@@ -8,6 +8,28 @@ import (
 	"github.com/flily/go-brainfuck/context"
 )
 
+func TestTokenString(t *testing.T) {
+	cases := []struct {
+		token    Token
+		expected string
+	}{
+		{TokenEOF, "EOF"},
+		{TokenIdentifier, "IDENTIFIER"},
+		{TokenInt, "INT"},
+		{TokenBoolean, "BOOLEAN"},
+		{TokenBracketLeft, "BRACKET-LEFT"},
+		{TokenBracketRight, "BRACKET-RIGHT"},
+		{-1, "unknown"},
+	}
+
+	for _, c := range cases {
+		got := c.token.String()
+		if got != c.expected {
+			t.Errorf("wrong token string, expect %s got %s", c.expected, got)
+		}
+	}
+}
+
 type testTokenizerCase struct {
 	t         *testing.T
 	input     string
@@ -33,6 +55,8 @@ func (t *testTokenizerCase) scan() (*Element, error) {
 }
 
 func (t *testTokenizerCase) check(token Token, content string, position string) *Element {
+	t.t.Helper()
+
 	elem, err := t.scan()
 	if err != nil {
 		t.t.Fatalf("expect scan token without error, got:\n%s", err)
@@ -60,12 +84,16 @@ func (t *testTokenizerCase) check(token Token, content string, position string) 
 }
 
 func (t *testTokenizerCase) Check(token Token, content string, position string) *testTokenizerCase {
+	t.t.Helper()
+
 	t.check(token, content, position)
 	return t
 }
 
 func (t *testTokenizerCase) CheckUint(content string, value uint64, position string) *testTokenizerCase {
-	elem := t.check(TokenUint, content, position)
+	t.t.Helper()
+
+	elem := t.check(TokenInt, content, position)
 	if elem.ValueUint != value {
 		t.t.Errorf("wrong token value, expect %d got %d", value, elem.ValueUint)
 		t.t.Fatalf("\n%s", elem.Context.HighlightText("expect %d", value))
@@ -75,6 +103,8 @@ func (t *testTokenizerCase) CheckUint(content string, value uint64, position str
 }
 
 func (t *testTokenizerCase) CheckInt(content string, value int64, position string) *testTokenizerCase {
+	t.t.Helper()
+
 	elem := t.check(TokenInt, content, position)
 
 	exp := int64(elem.ValueUint)
@@ -90,28 +120,47 @@ func (t *testTokenizerCase) CheckInt(content string, value int64, position strin
 	return t
 }
 
+func (t *testTokenizerCase) CheckEOF(position string) *testTokenizerCase {
+	t.t.Helper()
+
+	t.check(TokenEOF, "", position)
+	return t
+}
+
 func TestTokenizerScanIdentifier(t *testing.T) {
-	input := "lorem ipsum"
+	input := "lorem ipsum dolor sit-amet"
 	position1 := strings.Join([]string{
-		"    1 | lorem ipsum",
+		"    1 | lorem ipsum dolor sit-amet",
 		"      | ^^^^^",
 		"      | here",
 	}, "\n")
 	position2 := strings.Join([]string{
-		"    1 | lorem ipsum",
+		"    1 | lorem ipsum dolor sit-amet",
 		"      |       ^^^^^",
 		"      |       here",
 	}, "\n")
 	position3 := strings.Join([]string{
-		"    1 | lorem ipsum<EOF>",
-		"      |            ^^^^^",
-		"      |            here",
+		"    1 | lorem ipsum dolor sit-amet",
+		"      |             ^^^^^",
+		"      |             here",
+	}, "\n")
+	position4 := strings.Join([]string{
+		"    1 | lorem ipsum dolor sit-amet",
+		"      |                   ^^^^^^^^",
+		"      |                   here",
+	}, "\n")
+	position5 := strings.Join([]string{
+		"    1 | lorem ipsum dolor sit-amet<EOF>",
+		"      |                           ^^^^^",
+		"      |                           here",
 	}, "\n")
 
 	newTokenizerCase(t, input).
 		Check(TokenIdentifier, "lorem", position1).
 		Check(TokenIdentifier, "ipsum", position2).
-		Check(TokenEOF, "", position3)
+		Check(TokenIdentifier, "dolor", position3).
+		Check(TokenIdentifier, "sit-amet", position4).
+		CheckEOF(position5)
 }
 
 func TestTokenizerScanBoolean(t *testing.T) {
@@ -135,7 +184,7 @@ func TestTokenizerScanBoolean(t *testing.T) {
 	newTokenizerCase(t, input).
 		Check(TokenBoolean, "false", position1).
 		Check(TokenIdentifier, "ipsum", position2).
-		Check(TokenEOF, "", position3)
+		CheckEOF(position3)
 }
 
 func TestTokenizerScanUnsignedNumber(t *testing.T) {
@@ -162,10 +211,10 @@ func TestTokenizerScanUnsignedNumber(t *testing.T) {
 	}, "\n")
 
 	newTokenizerCase(t, input).
-		Check(TokenUint, "42", position1).
-		Check(TokenUint, "030", position2).
-		Check(TokenUint, "0x30", position3).
-		Check(TokenEOF, "", position4)
+		Check(TokenInt, "42", position1).
+		Check(TokenInt, "030", position2).
+		Check(TokenInt, "0x30", position3).
+		CheckEOF(position4)
 }
 
 func TestTokenizerScanUnsignedNumberWithValue(t *testing.T) {
@@ -195,5 +244,107 @@ func TestTokenizerScanUnsignedNumberWithValue(t *testing.T) {
 		CheckUint("42", 42, position1).
 		CheckUint("030", 24, position2).
 		CheckUint("0x30", 48, position3).
-		Check(TokenEOF, "", position4)
+		CheckEOF(position4)
+}
+
+func TestTokenizerScanUnsignedNumberOnlyZero(t *testing.T) {
+	input := "0"
+	position1 := strings.Join([]string{
+		"    1 | 0",
+		"      | ^",
+		"      | here",
+	}, "\n")
+	position2 := strings.Join([]string{
+		"    1 | 0<EOF>",
+		"      |  ^^^^^",
+		"      |  here",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckUint("0", 0, position1).
+		CheckEOF(position2)
+}
+
+func TestTokenizerScanNumberWithUnderscore(t *testing.T) {
+	input := "1_000_000 0xdead_BEEF 0770_660"
+	position1 := strings.Join([]string{
+		"    1 | 1_000_000 0xdead_BEEF 0770_660",
+		"      | ^^^^^^^^^",
+		"      | here",
+	}, "\n")
+	position2 := strings.Join([]string{
+		"    1 | 1_000_000 0xdead_BEEF 0770_660",
+		"      |           ^^^^^^^^^^^",
+		"      |           here",
+	}, "\n")
+	position3 := strings.Join([]string{
+		"    1 | 1_000_000 0xdead_BEEF 0770_660",
+		"      |                       ^^^^^^^^",
+		"      |                       here",
+	}, "\n")
+	position4 := strings.Join([]string{
+		"    1 | 1_000_000 0xdead_BEEF 0770_660<EOF>",
+		"      |                               ^^^^^",
+		"      |                               here",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckUint("1_000_000", 1000_000, position1).
+		CheckUint("0xdead_BEEF", 0xdead_beef, position2).
+		CheckUint("0770_660", 0770_660, position3).
+		CheckEOF(position4)
+}
+
+func TestTokenizerScanNegativeNumber(t *testing.T) {
+	input := "-42 -0x42 -077"
+	position1 := strings.Join([]string{
+		"    1 | -42 -0x42 -077",
+		"      | ^^^",
+		"      | here",
+	}, "\n")
+	position2 := strings.Join([]string{
+		"    1 | -42 -0x42 -077",
+		"      |     ^^^^^",
+		"      |     here",
+	}, "\n")
+	position3 := strings.Join([]string{
+		"    1 | -42 -0x42 -077",
+		"      |           ^^^^",
+		"      |           here",
+	}, "\n")
+	position4 := strings.Join([]string{
+		"    1 | -42 -0x42 -077<EOF>",
+		"      |               ^^^^^",
+		"      |               here",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckInt("-42", -42, position1).
+		CheckInt("-0x42", -0x42, position2).
+		CheckInt("-077", -077, position3).
+		CheckEOF(position4)
+}
+
+func TestTokenizerScanIdentifierStartsWithNumber(t *testing.T) {
+	input := "4ever 0zero"
+	position1 := strings.Join([]string{
+		"    1 | 4ever 0zero",
+		"      | ^^^^^",
+		"      | here",
+	}, "\n")
+	position2 := strings.Join([]string{
+		"    1 | 4ever 0zero",
+		"      |       ^^^^^",
+		"      |       here",
+	}, "\n")
+	position3 := strings.Join([]string{
+		"    1 | 4ever 0zero<EOF>",
+		"      |            ^^^^^",
+		"      |            here",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		Check(TokenIdentifier, "4ever", position1).
+		Check(TokenIdentifier, "0zero", position2).
+		CheckEOF(position3)
 }
