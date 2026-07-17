@@ -79,6 +79,34 @@ func NewTokenizer(file *context.FileContext) *Tokenizer {
 	return t
 }
 
+func (t *Tokenizer) scanWord() (string, *context.Context) {
+	start := t.cursor.State()
+	i := 0
+	for {
+		r, eol, eof := t.cursor.Peek(i)
+		if eol || eof {
+			break
+		}
+
+		found := false
+		if r == ' ' || r == '\t' {
+			found = true
+		}
+
+		if found {
+			break
+		}
+
+		i++
+	}
+
+	finish := t.cursor.PeekState(i)
+	t.cursor.SetState(finish)
+
+	content, ctx := t.cursor.FinishWith(start, finish)
+	return content, ctx
+}
+
 func (t *Tokenizer) scanIdentifier(token Token, startIndex int) *Element {
 	start := t.cursor.State()
 	i := startIndex
@@ -117,10 +145,11 @@ func (t *Tokenizer) scanIdentifier(token Token, startIndex int) *Element {
 	return NewElement(targetToken, content, ctx)
 }
 
-func (t *Tokenizer) scanUnsignedNumber(startIndex int, negative bool) *Element {
+func (t *Tokenizer) scanUnsignedNumber(startIndex int, negative bool) (*Element, error) {
 	start := t.cursor.State()
 
 	value := uint64(0)
+	invalidFormat := false
 	i := startIndex
 	for {
 		r, eol, eof := t.cursor.Peek(i)
@@ -139,7 +168,7 @@ func (t *Tokenizer) scanUnsignedNumber(startIndex int, negative bool) *Element {
 			found = true
 
 		default:
-			return t.scanIdentifier(TokenIdentifier, i)
+			invalidFormat = true
 		}
 
 		if found {
@@ -153,7 +182,13 @@ func (t *Tokenizer) scanUnsignedNumber(startIndex int, negative bool) *Element {
 	t.cursor.SetState(finish)
 
 	content, ctx := t.cursor.FinishWith(start, finish)
-	return NewElement(TokenInt, content, ctx).Int(value, negative)
+	if invalidFormat {
+		err := context.NewError(ctx, "invalid number format '%s'", content).
+			With("should be char [0-9] or underscore '_'")
+		return nil, err
+	}
+
+	return NewElement(TokenInt, content, ctx).Int(value, negative), nil
 }
 
 func (t *Tokenizer) scanHexadecimalNumber(startIndex int, negative bool) *Element {
@@ -238,7 +273,7 @@ func (t *Tokenizer) scanOctalNumber(startIndex int, negative bool) *Element {
 	return NewElement(TokenInt, content, ctx).Int(value, negative)
 }
 
-func (t *Tokenizer) scanPositiveNumber(startIndex int, negative bool) *Element {
+func (t *Tokenizer) scanPositiveNumber(startIndex int, negative bool) (*Element, error) {
 	r0, _, _ := t.cursor.Peek(startIndex)
 	if r0 != '0' {
 		return t.scanUnsignedNumber(startIndex, negative)
@@ -252,18 +287,72 @@ func (t *Tokenizer) scanPositiveNumber(startIndex int, negative bool) *Element {
 
 	switch r1 {
 	case 'x', 'X':
-		return t.scanHexadecimalNumber(startIndex+2, negative)
+		return t.scanHexadecimalNumber(startIndex+2, negative), nil
 	case '1', '2', '3', '4', '5', '6', '7':
-		return t.scanOctalNumber(startIndex+1, negative)
+		return t.scanOctalNumber(startIndex+1, negative), nil
 
 	default:
-		return t.scanIdentifier(TokenIdentifier, 0)
+		content, ctx := t.scanWord()
+		err := context.NewError(ctx, "invalid number format '%s'", content).
+			With("hexadecimal number should be 0x[0-9a-fA-F]+, octal number should be 0[0-7]+")
+		return nil, err
 	}
 }
 
-func (t *Tokenizer) scanNegativeInteger() *Element {
-	elem := t.scanPositiveNumber(1, true)
-	return elem
+func (t *Tokenizer) scanQuotedIdentifier() (*Element, error) {
+	start := t.cursor.PeekState(1)
+	i := 1
+	closed := false
+	for {
+		r, eol, eof := t.cursor.Peek(i)
+		if eol || eof {
+			break
+		}
+
+		if r == '"' {
+			closed = true
+			break
+		}
+
+		i++
+	}
+
+	finish := t.cursor.PeekState(i)
+	t.cursor.SetState(finish)
+	content, ctx := t.cursor.FinishWith(start, finish)
+	if !closed {
+		return nil, context.NewError(ctx, "unclosed quoted identifier")
+	}
+
+	t.cursor.Skip(1) // skip closing quote
+	return NewElement(TokenIdentifier, content, ctx), nil
+}
+
+func (t *Tokenizer) scanNegativeInteger() (*Element, error) {
+	elem, err := t.scanPositiveNumber(1, true)
+	return elem, err
+}
+
+func (t *Tokenizer) scanSymbols(r rune, ctx *context.Context) (*Element, error) {
+	var err error
+	var elem *Element
+	switch r {
+	case '{':
+		elem = NewElement(TokenBracketLeft, "{", ctx)
+
+	case '}':
+		elem = NewElement(TokenBracketRight, "}", ctx)
+
+	default:
+		err = context.NewError(ctx, "unknown charactor found").
+			With("unknown charactor '%c' (0x%x)", r, r)
+	}
+
+	if err == nil {
+		t.cursor.Skip(1)
+	}
+
+	return elem, err
 }
 
 func (t *Tokenizer) Next() (*Element, error) {
@@ -273,19 +362,26 @@ func (t *Tokenizer) Next() (*Element, error) {
 	}
 
 	t.cursor.SkipWhitespace()
+
+	var err error
 	var result *Element
-	r, _ := t.cursor.CurrentChar()
+	r, ctx := t.cursor.CurrentChar()
 	switch {
 	case ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z') || r == '_':
 		result = t.scanIdentifier(TokenIdentifier, 0)
 
 	case '0' <= r && r <= '9':
-		result = t.scanPositiveNumber(0, false)
+		result, err = t.scanPositiveNumber(0, false)
+
+	case r == '"':
+		result, err = t.scanQuotedIdentifier()
 
 	case r == '-':
-		result = t.scanNegativeInteger()
+		result, err = t.scanNegativeInteger()
 
+	default:
+		result, err = t.scanSymbols(r, ctx)
 	}
 
-	return result, nil
+	return result, err
 }

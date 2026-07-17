@@ -83,6 +83,21 @@ func (t *testTokenizerCase) check(token Token, content string, position string) 
 	return elem
 }
 
+func (t *testTokenizerCase) CheckError(message string) *testTokenizerCase {
+	t.t.Helper()
+
+	elem, err := t.scan()
+	if err == nil {
+		t.t.Fatalf("expect scan token with error, got:\n%v", elem)
+	}
+
+	if err.Error() != message {
+		t.t.Fatalf("wrong error message, expect\n%s\ngot\n%s", message, err.Error())
+	}
+
+	return t
+}
+
 func (t *testTokenizerCase) Check(token Token, content string, position string) *testTokenizerCase {
 	t.t.Helper()
 
@@ -128,39 +143,63 @@ func (t *testTokenizerCase) CheckEOF(position string) *testTokenizerCase {
 }
 
 func TestTokenizerScanIdentifier(t *testing.T) {
-	input := "lorem ipsum dolor sit-amet"
+	input := "lorem ipsum6 dolor sit-amet"
 	position1 := strings.Join([]string{
-		"    1 | lorem ipsum dolor sit-amet",
+		"    1 | lorem ipsum6 dolor sit-amet",
 		"      | ^^^^^",
 		"      | here",
 	}, "\n")
 	position2 := strings.Join([]string{
-		"    1 | lorem ipsum dolor sit-amet",
-		"      |       ^^^^^",
+		"    1 | lorem ipsum6 dolor sit-amet",
+		"      |       ^^^^^^",
 		"      |       here",
 	}, "\n")
 	position3 := strings.Join([]string{
-		"    1 | lorem ipsum dolor sit-amet",
-		"      |             ^^^^^",
-		"      |             here",
+		"    1 | lorem ipsum6 dolor sit-amet",
+		"      |              ^^^^^",
+		"      |              here",
 	}, "\n")
 	position4 := strings.Join([]string{
-		"    1 | lorem ipsum dolor sit-amet",
-		"      |                   ^^^^^^^^",
-		"      |                   here",
+		"    1 | lorem ipsum6 dolor sit-amet",
+		"      |                    ^^^^^^^^",
+		"      |                    here",
 	}, "\n")
 	position5 := strings.Join([]string{
-		"    1 | lorem ipsum dolor sit-amet<EOF>",
-		"      |                           ^^^^^",
-		"      |                           here",
+		"    1 | lorem ipsum6 dolor sit-amet<EOF>",
+		"      |                            ^^^^^",
+		"      |                            here",
 	}, "\n")
 
 	newTokenizerCase(t, input).
 		Check(TokenIdentifier, "lorem", position1).
-		Check(TokenIdentifier, "ipsum", position2).
+		Check(TokenIdentifier, "ipsum6", position2).
 		Check(TokenIdentifier, "dolor", position3).
 		Check(TokenIdentifier, "sit-amet", position4).
 		CheckEOF(position5)
+}
+
+func TestTokenizerScanQuotedIdentifier(t *testing.T) {
+	input := `"lorem ipsum" "dolor sit amet"`
+	position1 := strings.Join([]string{
+		`    1 | "lorem ipsum" "dolor sit amet"`,
+		"      |  ^^^^^^^^^^^",
+		"      |  here",
+	}, "\n")
+	position2 := strings.Join([]string{
+		`    1 | "lorem ipsum" "dolor sit amet"`,
+		"      |                ^^^^^^^^^^^^^^",
+		"      |                here",
+	}, "\n")
+	position3 := strings.Join([]string{
+		`    1 | "lorem ipsum" "dolor sit amet"<EOF>`,
+		"      |                               ^^^^^",
+		"      |                               here",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		Check(TokenIdentifier, "lorem ipsum", position1).
+		Check(TokenIdentifier, "dolor sit amet", position2).
+		CheckEOF(position3)
 }
 
 func TestTokenizerScanBoolean(t *testing.T) {
@@ -325,26 +364,116 @@ func TestTokenizerScanNegativeNumber(t *testing.T) {
 		CheckEOF(position4)
 }
 
-func TestTokenizerScanIdentifierStartsWithNumber(t *testing.T) {
-	input := "4ever 0zero"
+func TestTokenizerScanErrorInvalidUnsignedNumberFormat(t *testing.T) {
+	input := "4ever 42"
+	message := strings.Join([]string{
+		"test.txt:1:1: error: invalid number format '4ever'",
+		"    1 | 4ever 42",
+		"      | ^^^^^",
+		"      | should be char [0-9] or underscore '_'",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckError(message)
+}
+
+func TestTokenizerScanErrorInvalidNumberFormat(t *testing.T) {
+	input := "0zero 42"
+	message := strings.Join([]string{
+		"test.txt:1:1: error: invalid number format '0zero'",
+		"    1 | 0zero 42",
+		"      | ^^^^^",
+		"      | hexadecimal number should be 0x[0-9a-fA-F]+, octal number should be 0[0-7]+",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckError(message)
+}
+
+func TestTokenizerScanMultipleLines(t *testing.T) {
+	input := strings.Join([]string{
+		"lorem ipsum",
+		"dolor sit amet",
+	}, "\n")
 	position1 := strings.Join([]string{
-		"    1 | 4ever 0zero",
+		"    1 | lorem ipsum",
 		"      | ^^^^^",
 		"      | here",
 	}, "\n")
 	position2 := strings.Join([]string{
-		"    1 | 4ever 0zero",
+		"    1 | lorem ipsum",
 		"      |       ^^^^^",
 		"      |       here",
 	}, "\n")
 	position3 := strings.Join([]string{
-		"    1 | 4ever 0zero<EOF>",
-		"      |            ^^^^^",
-		"      |            here",
+		"    2 | dolor sit amet",
+		"      | ^^^^^",
+		"      | here",
+	}, "\n")
+	position4 := strings.Join([]string{
+		"    2 | dolor sit amet",
+		"      |       ^^^",
+		"      |       here",
+	}, "\n")
+	position5 := strings.Join([]string{
+		"    2 | dolor sit amet",
+		"      |           ^^^^",
+		"      |           here",
+	}, "\n")
+	position6 := strings.Join([]string{
+		"    2 | dolor sit amet<EOF>",
+		"      |               ^^^^^",
+		"      |               here",
 	}, "\n")
 
 	newTokenizerCase(t, input).
-		Check(TokenIdentifier, "4ever", position1).
-		Check(TokenIdentifier, "0zero", position2).
-		CheckEOF(position3)
+		Check(TokenIdentifier, "lorem", position1).
+		Check(TokenIdentifier, "ipsum", position2).
+		Check(TokenIdentifier, "dolor", position3).
+		Check(TokenIdentifier, "sit", position4).
+		Check(TokenIdentifier, "amet", position5).
+		CheckEOF(position6)
+}
+
+func TestTokenizerScanSymbols(t *testing.T) {
+	input := "{lorem}"
+	position1 := strings.Join([]string{
+		"    1 | {lorem}",
+		"      | ^",
+		"      | here",
+	}, "\n")
+	position2 := strings.Join([]string{
+		"    1 | {lorem}",
+		"      |  ^^^^^",
+		"      |  here",
+	}, "\n")
+	position3 := strings.Join([]string{
+		"    1 | {lorem}",
+		"      |       ^",
+		"      |       here",
+	}, "\n")
+	position4 := strings.Join([]string{
+		"    1 | {lorem}<EOF>",
+		"      |        ^^^^^",
+		"      |        here",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		Check(TokenBracketLeft, "{", position1).
+		Check(TokenIdentifier, "lorem", position2).
+		Check(TokenBracketRight, "}", position3).
+		CheckEOF(position4)
+}
+
+func TestTokenizerScanErrorUnknownCharacter(t *testing.T) {
+	input := "#lorem"
+	message := strings.Join([]string{
+		"test.txt:1:1: error: unknown charactor found",
+		"    1 | #lorem",
+		"      | ^",
+		"      | unknown charactor '#' (0x23)",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckError(message)
 }
