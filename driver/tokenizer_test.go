@@ -202,6 +202,36 @@ func TestTokenizerScanQuotedIdentifier(t *testing.T) {
 		CheckEOF(position3)
 }
 
+func TestTokenizerScanQutedIdentifierWithUnclosedQuoteAtEOF(t *testing.T) {
+	input := `"lorem ipsum`
+	message := strings.Join([]string{
+		"test.txt:1:13: error: unclosed quoted identifier",
+		`    1 | "lorem ipsum<EOF>`,
+		"      |             ^^^^^",
+		"      |             expect closing quote '\"' here",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckError(message)
+}
+
+func TestTokenizerScanQutedIdentifierWithUnclosedQuoteAtEOL(t *testing.T) {
+	input := strings.Join([]string{
+		`"lorem ipsum`,
+		"",
+	}, "\n")
+
+	message := strings.Join([]string{
+		"test.txt:1:13: error: unclosed quoted identifier",
+		`    1 | "lorem ipsum<EOL LF>`,
+		"      |             ^^^^^^^^",
+		"      |             expect closing quote '\"' here",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckError(message)
+}
+
 func TestTokenizerScanBoolean(t *testing.T) {
 	input := "false ipsum"
 	position1 := strings.Join([]string{
@@ -371,6 +401,19 @@ func TestTokenizerScanErrorInvalidUnsignedNumberFormat(t *testing.T) {
 		"    1 | 4ever 42",
 		"      | ^^^^^",
 		"      | should be char [0-9] or underscore '_'",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckError(message)
+}
+
+func TestTokenizerScanErrorInvalidNumberFormatAtEnd(t *testing.T) {
+	input := "0zero"
+	message := strings.Join([]string{
+		"test.txt:1:1: error: invalid number format '0zero'",
+		"    1 | 0zero",
+		"      | ^^^^^",
+		"      | hexadecimal number should be 0x[0-9a-fA-F]+, octal number should be 0[0-7]+",
 	}, "\n")
 
 	newTokenizerCase(t, input).

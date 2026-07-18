@@ -88,12 +88,7 @@ func (t *Tokenizer) scanWord() (string, *context.Context) {
 			break
 		}
 
-		found := false
 		if r == ' ' || r == '\t' {
-			found = true
-		}
-
-		if found {
 			break
 		}
 
@@ -321,7 +316,10 @@ func (t *Tokenizer) scanQuotedIdentifier() (*Element, error) {
 	t.cursor.SetState(finish)
 	content, ctx := t.cursor.FinishWith(start, finish)
 	if !closed {
-		return nil, context.NewError(ctx, "unclosed quoted identifier")
+		_, ctx := t.cursor.CurrentChar()
+		err := context.NewError(ctx, "unclosed quoted identifier").
+			With("expect closing quote '\"' here")
+		return nil, err
 	}
 
 	t.cursor.Skip(1) // skip closing quote
