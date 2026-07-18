@@ -65,6 +65,11 @@ func (e *Element) Int(v uint64, neg bool) *Element {
 	return e
 }
 
+func (e *Element) Errorf(format string, args ...any) *context.Diagnostic {
+	err := context.NewError(e.Context, format, args...)
+	return err
+}
+
 type Tokenizer struct {
 	file   *context.FileContext
 	cursor *context.Cursor
@@ -186,10 +191,11 @@ func (t *Tokenizer) scanUnsignedNumber(startIndex int, negative bool) (*Element,
 	return NewElement(TokenInt, content, ctx).Int(value, negative), nil
 }
 
-func (t *Tokenizer) scanHexadecimalNumber(startIndex int, negative bool) *Element {
+func (t *Tokenizer) scanHexadecimalNumber(startIndex int, negative bool) (*Element, error) {
 	start := t.cursor.State()
 
 	value := uint64(0)
+	invalidFormat := false
 	i := startIndex
 	for {
 		r, eol, eof := t.cursor.Peek(i)
@@ -213,8 +219,11 @@ func (t *Tokenizer) scanHexadecimalNumber(startIndex int, negative bool) *Elemen
 
 		case r == '_':
 
-		default:
+		case r == ' ' || r == '\t':
 			found = true
+
+		default:
+			invalidFormat = true
 		}
 
 		if found {
@@ -228,13 +237,20 @@ func (t *Tokenizer) scanHexadecimalNumber(startIndex int, negative bool) *Elemen
 	t.cursor.SetState(finish)
 
 	content, ctx := t.cursor.FinishWith(start, finish)
-	return NewElement(TokenInt, content, ctx).Int(value, negative)
+	if invalidFormat {
+		err := context.NewError(ctx, "invalid number format '%s'", content).
+			With("hexadecimal number should be 0x[0-9a-fA-F]+")
+		return nil, err
+	}
+
+	return NewElement(TokenInt, content, ctx).Int(value, negative), nil
 }
 
-func (t *Tokenizer) scanOctalNumber(startIndex int, negative bool) *Element {
+func (t *Tokenizer) scanOctalNumber(startIndex int, negative bool) (*Element, error) {
 	start := t.cursor.State()
 
 	value := uint64(0)
+	invalidFormat := false
 	i := startIndex
 	for {
 		r, eol, eof := t.cursor.Peek(i)
@@ -250,8 +266,11 @@ func (t *Tokenizer) scanOctalNumber(startIndex int, negative bool) *Element {
 
 		case r == '_':
 
-		default:
+		case r == ' ' || r == '\t':
 			found = true
+
+		default:
+			invalidFormat = true
 		}
 
 		if found {
@@ -265,7 +284,15 @@ func (t *Tokenizer) scanOctalNumber(startIndex int, negative bool) *Element {
 	t.cursor.SetState(finish)
 
 	content, ctx := t.cursor.FinishWith(start, finish)
-	return NewElement(TokenInt, content, ctx).Int(value, negative)
+	elem := NewElement(TokenInt, content, ctx).Int(value, negative)
+
+	if invalidFormat {
+		err := elem.Errorf("invalid number format '%s'", content).
+			With("octal number should be 0[0-7]+")
+		return nil, err
+	}
+
+	return elem, nil
 }
 
 func (t *Tokenizer) scanPositiveNumber(startIndex int, negative bool) (*Element, error) {
@@ -282,9 +309,10 @@ func (t *Tokenizer) scanPositiveNumber(startIndex int, negative bool) (*Element,
 
 	switch r1 {
 	case 'x', 'X':
-		return t.scanHexadecimalNumber(startIndex+2, negative), nil
+		return t.scanHexadecimalNumber(startIndex+2, negative)
+
 	case '1', '2', '3', '4', '5', '6', '7':
-		return t.scanOctalNumber(startIndex+1, negative), nil
+		return t.scanOctalNumber(startIndex+1, negative)
 
 	default:
 		content, ctx := t.scanWord()

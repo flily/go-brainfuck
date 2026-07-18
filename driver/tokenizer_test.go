@@ -433,6 +433,32 @@ func TestTokenizerScanErrorInvalidNumberFormat(t *testing.T) {
 		CheckError(message)
 }
 
+func TestTokenizerScanErrorWrongFormatHexadecimal(t *testing.T) {
+	input := "0xbeefqwer"
+	message := strings.Join([]string{
+		"test.txt:1:1: error: invalid number format '0xbeefqwer'",
+		"    1 | 0xbeefqwer",
+		"      | ^^^^^^^^^^",
+		"      | hexadecimal number should be 0x[0-9a-fA-F]+",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckError(message)
+}
+
+func TestTokenizerScanErrorWrongFormatOctal(t *testing.T) {
+	input := "0778"
+	message := strings.Join([]string{
+		"test.txt:1:1: error: invalid number format '0778'",
+		"    1 | 0778",
+		"      | ^^^^",
+		"      | octal number should be 0[0-7]+",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckError(message)
+}
+
 func TestTokenizerScanMultipleLines(t *testing.T) {
 	input := strings.Join([]string{
 		"lorem ipsum",
