@@ -40,7 +40,7 @@ func TestTestCaseEqual(t *testing.T) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Name.Content = "example"
+	o.Name.Value = "example"
 	if expected.Equal(o) {
 		t.Fatalf("expected not equal, got equal")
 	}

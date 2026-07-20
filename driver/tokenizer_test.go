@@ -69,9 +69,10 @@ func (t *testTokenizerCase) check(token Token, content string, position string) 
 		t.t.Fatalf("\n%s", message)
 	}
 
-	if elem.ValueString != content {
+	val := elem.StringValue()
+	if val.Value != content {
 		message := ctx.HighlightText("expect '%s'", content)
-		t.t.Errorf("wrong token, expect '%s' got '%s'", content, elem.ValueString)
+		t.t.Errorf("wrong token, expect '%s' got '%s'", content, val.Value)
 		t.t.Fatalf("\n%s", message)
 	}
 
@@ -109,8 +110,9 @@ func (t *testTokenizerCase) CheckUint(content string, value uint64, position str
 	t.t.Helper()
 
 	elem := t.check(TokenInt, content, position)
-	if elem.ValueUint != value {
-		t.t.Errorf("wrong token value, expect %d got %d", value, elem.ValueUint)
+	val := elem.UintValue()
+	if val.Value != value {
+		t.t.Errorf("wrong token value, expect %d got %d", value, val.Value)
 		t.t.Fatalf("\n%s", elem.Context.HighlightText("expect %d", value))
 	}
 
@@ -122,13 +124,9 @@ func (t *testTokenizerCase) CheckInt(content string, value int64, position strin
 
 	elem := t.check(TokenInt, content, position)
 
-	exp := int64(elem.ValueUint)
-	if elem.ValueNegative {
-		exp = -exp
-	}
-
-	if exp != value {
-		t.t.Errorf("wrong token value, expect %d got %d", value, exp)
+	val := elem.IntValue()
+	if val.Value != value {
+		t.t.Errorf("wrong token value, expect %d got %d", value, val.Value)
 		t.t.Fatalf("\n%s", elem.Context.HighlightText("expect %d", value))
 	}
 

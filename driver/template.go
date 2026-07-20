@@ -34,13 +34,13 @@ var acceptedInitParameters = []string{
 }
 
 type ContextItem[T any] struct {
-	Content T
+	Value   T
 	Context *context.Context
 }
 
 func NewContextItem[T any](content T, ctx *context.Context) ContextItem[T] {
 	item := ContextItem[T]{
-		Content: content,
+		Value:   content,
 		Context: ctx,
 	}
 
@@ -50,7 +50,7 @@ func NewContextItem[T any](content T, ctx *context.Context) ContextItem[T] {
 func UnpackValues[T any](items []ContextItem[T]) []T {
 	values := make([]T, len(items))
 	for i, item := range items {
-		values[i] = item.Content
+		values[i] = item.Value
 	}
 
 	return values
@@ -75,7 +75,7 @@ func NewTestCase(name string, ctx *context.Context) TestCase {
 }
 
 func (c *TestCase) Equal(o TestCase) bool {
-	if c.Name.Content != o.Name.Content {
+	if c.Name.Value != o.Name.Value {
 		return false
 	}
 
@@ -104,27 +104,27 @@ type InitParameters struct {
 }
 
 func (p *InitParameters) Equal(o InitParameters) bool {
-	if p.MemorySize.Content != o.MemorySize.Content {
+	if p.MemorySize.Value != o.MemorySize.Value {
 		return false
 	}
 
-	if p.StackSize.Content != o.StackSize.Content {
+	if p.StackSize.Value != o.StackSize.Value {
 		return false
 	}
 
-	if p.WordType.Content != o.WordType.Content {
+	if p.WordType.Value != o.WordType.Value {
 		return false
 	}
 
-	if p.EOFValue.Content != o.EOFValue.Content {
+	if p.EOFValue.Value != o.EOFValue.Value {
 		return false
 	}
 
-	if p.IgnoreEOF.Content != o.IgnoreEOF.Content {
+	if p.IgnoreEOF.Value != o.IgnoreEOF.Value {
 		return false
 	}
 
-	if p.RaiseEOF.Content != o.RaiseEOF.Content {
+	if p.RaiseEOF.Value != o.RaiseEOF.Value {
 		return false
 	}
 
@@ -138,7 +138,7 @@ type TestDriverItem struct {
 }
 
 func (i *TestDriverItem) Equal(o *TestDriverItem) bool {
-	if i.ScriptName.Content != o.ScriptName.Content {
+	if i.ScriptName.Value != o.ScriptName.Value {
 		return false
 	}
 

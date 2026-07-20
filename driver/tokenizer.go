@@ -2,6 +2,7 @@ package driver
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/flily/go-brainfuck/context"
 )
@@ -68,6 +69,37 @@ func (e *Element) Int(v uint64, neg bool) *Element {
 func (e *Element) Errorf(format string, args ...any) *context.Diagnostic {
 	err := context.NewError(e.Context, format, args...)
 	return err
+}
+
+func (e *Element) StringValue() ContextItem[string] {
+	return NewContextItem(e.ValueString, e.Context)
+}
+
+func (e *Element) IntValue() ContextItem[int64] {
+	var v int64
+	if e.ValueNegative {
+		v = -int64(e.ValueUint)
+	} else {
+		v = int64(e.ValueUint)
+	}
+
+	return NewContextItem(v, e.Context)
+}
+
+func (e *Element) UintValue() ContextItem[uint64] {
+	return NewContextItem(e.ValueUint, e.Context)
+}
+
+func (e *Element) BoolValue() ContextItem[bool] {
+	var v bool
+	switch strings.ToLower(e.ValueString) {
+	case "true", "yes":
+		v = true
+
+	default:
+	}
+
+	return NewContextItem(v, e.Context)
 }
 
 type Tokenizer struct {
