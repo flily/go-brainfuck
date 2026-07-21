@@ -14,17 +14,17 @@ const (
 	TokenIdentifier
 	TokenInt
 	TokenBoolean
-	TokenBracketLeft
-	TokenBracketRight
+	TokenBraceLeft
+	TokenBraceRight
 )
 
 var tokenNameMap = map[Token]string{
-	TokenEOF:          "EOF",
-	TokenIdentifier:   "IDENTIFIER",
-	TokenInt:          "INT",
-	TokenBoolean:      "BOOLEAN",
-	TokenBracketLeft:  "BRACKET-LEFT",
-	TokenBracketRight: "BRACKET-RIGHT",
+	TokenEOF:        "EOF",
+	TokenIdentifier: "IDENTIFIER",
+	TokenInt:        "INT",
+	TokenBoolean:    "BOOLEAN",
+	TokenBraceLeft:  "BRACE-LEFT",
+	TokenBraceRight: "BRACE-RIGHT",
 }
 
 func (t Token) String() string {
@@ -396,10 +396,10 @@ func (t *Tokenizer) scanSymbols(r rune, ctx *context.Context) (*Element, error) 
 	var elem *Element
 	switch r {
 	case '{':
-		elem = NewElement(TokenBracketLeft, "{", ctx)
+		elem = NewElement(TokenBraceLeft, "{", ctx)
 
 	case '}':
-		elem = NewElement(TokenBracketRight, "}", ctx)
+		elem = NewElement(TokenBraceRight, "}", ctx)
 
 	default:
 		err = context.NewError(ctx, "unknown charactor found").

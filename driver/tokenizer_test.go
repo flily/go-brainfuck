@@ -17,8 +17,8 @@ func TestTokenString(t *testing.T) {
 		{TokenIdentifier, "IDENTIFIER"},
 		{TokenInt, "INT"},
 		{TokenBoolean, "BOOLEAN"},
-		{TokenBracketLeft, "BRACKET-LEFT"},
-		{TokenBracketRight, "BRACKET-RIGHT"},
+		{TokenBraceLeft, "BRACE-LEFT"},
+		{TokenBraceRight, "BRACE-RIGHT"},
 		{-1, "unknown"},
 	}
 
@@ -526,9 +526,9 @@ func TestTokenizerScanSymbols(t *testing.T) {
 	}, "\n")
 
 	newTokenizerCase(t, input).
-		Check(TokenBracketLeft, "{", position1).
+		Check(TokenBraceLeft, "{", position1).
 		Check(TokenIdentifier, "lorem", position2).
-		Check(TokenBracketRight, "}", position3).
+		Check(TokenBraceRight, "}", position3).
 		CheckEOF(position4)
 }
 
