@@ -24,13 +24,10 @@ const (
 	FieldRaiseEOF   = "raise-eof"
 )
 
-var acceptedInitParameters = []string{
-	FieldMemorySize,
-	FieldStackSize,
-	FieldWord,
-	FieldEOFValue,
-	FieldIgnoreEOF,
-	FieldRaiseEOF,
+var requiredSections = []string{
+	SectionScript,
+	SectionInit,
+	SectionCase,
 }
 
 type ContextItem[T any] struct {

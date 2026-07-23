@@ -91,3 +91,37 @@ func TestParserStartWithCaseSection(t *testing.T) {
 
 	checkError(t, input, expected)
 }
+
+func TestParserErrorWithUnknownSection(t *testing.T) {
+	input := strings.Join([]string{
+		`script "hello.bf"`,
+		`lorem ipsum {`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:2:1: error: unknown section",
+		"    2 | lorem ipsum {",
+		"      | ^^^^^",
+		"      | unknown section 'lorem'",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserScriptNameOnly(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {}`,
+		`case {}`,
+	}, "\n")
+
+	expected := &TestDriverItem{
+		ScriptName: NewContextItem("path/to/script.bf", nil),
+		Tests: []TestCase{
+			{Name: NewContextItem("test case 1", nil)},
+		},
+	}
+
+	checkOK(t, input, expected)
+}

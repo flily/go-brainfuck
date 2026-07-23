@@ -1,6 +1,8 @@
 package driver
 
 import (
+	"fmt"
+
 	"github.com/flily/go-brainfuck/config"
 	"github.com/flily/go-brainfuck/context"
 )
@@ -71,6 +73,9 @@ func (p *Parser) setInitParameter(item *TestDriverItem, name ContextItem[string]
 
 func (p *Parser) parseInitParameters(item *TestDriverItem) (bool, error) {
 	name, err := p.nextToken()
+	if err != nil {
+		return true, err
+	}
 
 	stop := false
 	switch name.Token {
@@ -99,14 +104,82 @@ func (p *Parser) parseInit(item *TestDriverItem) error {
 		return err
 	}
 
-	if _, err := p.expectToken(TokenBraceRight); err != nil {
-		return err
+	for {
+		stop, err := p.parseInitParameters(item)
+		if err != nil {
+			return err
+		}
+
+		if stop {
+			break
+		}
 	}
 
 	return nil
 }
 
-func (p *Parser) parseCase(item *TestDriverItem) error {
+func (p *Parser) parseCaseParameter(item *TestCase) (bool, error) {
+	token, err := p.nextToken()
+	if err != nil {
+		return true, err
+	}
+
+	stop := false
+	switch token.Token {
+	case TokenIdentifier:
+
+	case TokenBraceRight:
+		stop = true
+
+	case TokenEOF:
+		err = token.Errorf("unexpected end of file").
+			With("expect '}' here, got %s", token.Token)
+
+	default:
+		err = token.Errorf("unexpected token type").
+			With("expect identifier or '}', got %s", token.Token)
+	}
+	return stop, err
+}
+
+func (p *Parser) parseCase(keyword *Element, item *TestDriverItem) error {
+	caseItem := &TestCase{}
+	token, err := p.nextToken()
+	if err != nil {
+		return err
+	}
+
+	if token.Token == TokenIdentifier {
+		caseItem.Name = token.StringValue()
+		token, err = p.nextToken()
+		if err != nil {
+			return err
+		}
+	}
+
+	if token.Token != TokenBraceLeft {
+		err := token.Errorf("unexpected token found").
+			With("expect '{' here, got %s", token.Token)
+		return err
+	}
+
+	for {
+		stop, err := p.parseCaseParameter(caseItem)
+		if err != nil {
+			return err
+		}
+
+		if stop {
+			break
+		}
+	}
+
+	if caseItem.Name.Context == nil {
+		name := fmt.Sprintf("test case %d", len(item.Tests)+1)
+		caseItem.Name = NewContextItem(name, keyword.Context)
+	}
+
+	item.Tests = append(item.Tests, *caseItem)
 	return nil
 }
 
@@ -133,7 +206,7 @@ func (p *Parser) Parse() (*TestDriverItem, error) {
 		Tests: make([]TestCase, 0, 16),
 	}
 
-	requiredSections := map[string]bool{
+	sectionAppearances := map[string]bool{
 		SectionScript: false,
 		SectionInit:   false,
 		SectionCase:   false,
@@ -160,26 +233,27 @@ func (p *Parser) Parse() (*TestDriverItem, error) {
 		switch token.ValueString {
 		case SectionScript:
 			err = p.parseScript(item)
-			requiredSections[SectionScript] = true
+			sectionAppearances[SectionScript] = true
 
 		case SectionInit:
-			if err = checkRequiredFirstSection(requiredSections, token); err != nil {
+			if err = checkRequiredFirstSection(sectionAppearances, token); err != nil {
 				break
 			}
 
 			err = p.parseInit(item)
-			requiredSections[SectionInit] = true
+			sectionAppearances[SectionInit] = true
 
 		case SectionCase:
-			if err = checkRequiredFirstSection(requiredSections, token); err != nil {
+			if err = checkRequiredFirstSection(sectionAppearances, token); err != nil {
 				break
 			}
 
-			err = p.parseCase(item)
-			requiredSections[SectionCase] = true
+			err = p.parseCase(token, item)
+			sectionAppearances[SectionCase] = true
 
 		default:
-			err = token.Errorf("unknown section %s", token.ValueString)
+			err = token.Errorf("unknown section").
+				With("unknown section '%s'", token.ValueString)
 		}
 
 		if err != nil {
@@ -187,18 +261,18 @@ func (p *Parser) Parse() (*TestDriverItem, error) {
 		}
 	}
 
-	if token.Token == TokenEOF {
-		for section, found := range requiredSections {
-			if !found {
-				err = context.NewError(token.Context, "missing required section").
-					With("missing required section '%s'", section)
-				break
-			}
-		}
-	}
-
 	if err != nil {
 		return nil, err
+	}
+
+	if token.Token == TokenEOF {
+		for _, section := range requiredSections {
+			if !sectionAppearances[section] {
+				err := context.NewError(token.Context, "missing required section").
+					With("missing required section '%s'", section)
+				return nil, err
+			}
+		}
 	}
 
 	return item, nil
