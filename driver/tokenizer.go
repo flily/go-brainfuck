@@ -90,16 +90,19 @@ func (e *Element) UintValue() ContextItem[uint64] {
 	return NewContextItem(e.ValueUint, e.Context)
 }
 
-func (e *Element) BoolValue() ContextItem[bool] {
-	var v bool
+func (e *Element) BoolValue() (ContextItem[bool], error) {
 	switch strings.ToLower(e.ValueString) {
 	case "true", "yes":
-		v = true
+		return NewContextItem(true, e.Context), nil
+
+	case "false", "no":
+		return NewContextItem(false, e.Context), nil
 
 	default:
+		err := context.NewError(e.Context, "invalid boolean value '%s'", e.ValueString).
+			With("use 'yes'/'no'")
+		return NewContextItem(false, e.Context), err
 	}
-
-	return NewContextItem(v, e.Context)
 }
 
 type Tokenizer struct {
@@ -414,12 +417,11 @@ func (t *Tokenizer) scanSymbols(r rune, ctx *context.Context) (*Element, error) 
 }
 
 func (t *Tokenizer) Next() (*Element, error) {
+	t.cursor.SkipWhitespace()
 	if t.cursor.EOF() {
 		eofCtx := t.cursor.EOFContext()
 		return NewElement(TokenEOF, "", eofCtx), nil
 	}
-
-	t.cursor.SkipWhitespace()
 
 	var err error
 	var result *Element

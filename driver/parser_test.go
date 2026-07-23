@@ -44,7 +44,7 @@ func checkOK(t *testing.T, input string, expected *TestDriverItem) {
 	}
 }
 
-func TestParserEmptyContent(t *testing.T) {
+func TestParserErrorEmptyContent(t *testing.T) {
 	input := strings.Join([]string{
 		"",
 	}, "\n")
@@ -59,7 +59,7 @@ func TestParserEmptyContent(t *testing.T) {
 	checkError(t, input, expected)
 }
 
-func TestParserStartWithInitSection(t *testing.T) {
+func TestParserErrorStartWithInitSection(t *testing.T) {
 	input := strings.Join([]string{
 		"init {",
 		"    memory-size: 1024",
@@ -76,7 +76,7 @@ func TestParserStartWithInitSection(t *testing.T) {
 	checkError(t, input, expected)
 }
 
-func TestParserStartWithCaseSection(t *testing.T) {
+func TestParserErrorStartWithCaseSection(t *testing.T) {
 	input := strings.Join([]string{
 		"case example {",
 		"}",
@@ -104,6 +104,39 @@ func TestParserErrorWithUnknownSection(t *testing.T) {
 		"    2 | lorem ipsum {",
 		"      | ^^^^^",
 		"      | unknown section 'lorem'",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorWithMissingRequiredSectionCase(t *testing.T) {
+	input := strings.Join([]string{
+		`script "hello.bf"`,
+		`init {}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:2:8: error: missing required section",
+		"    2 | init {}<EOF>",
+		"      |        ^^^^^",
+		"      |        missing required section 'case'",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorWithMissingRequiredSectionInit(t *testing.T) {
+	input := strings.Join([]string{
+		`script "hello.bf"`,
+		`case {}`,
+		``,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:3:1: error: missing required section",
+		"    3 | <EOF>",
+		"      | ^^^^^",
+		"      | missing required section 'init'",
 	}, "\n")
 
 	checkError(t, input, expected)
