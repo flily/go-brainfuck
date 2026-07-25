@@ -212,3 +212,126 @@ func TestParserWithInitFields(t *testing.T) {
 
 	checkOK(t, input, expected)
 }
+
+func TestParserErrorWithInvalidMemoryType(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size 1024`,
+		`    stack-size  256`,
+		`    word        byte`,
+		`}`,
+		`case {}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:5:17: error: invalid parameter value",
+		"    5 |     word        byte",
+		"      |                 ^^^^",
+		"      |                 invalid memory unit type 'byte'",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorWithInvalidBooleanValue(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size 1024`,
+		`    stack-size  256`,
+		`    word        uint8`,
+		`    ignore-eof  maybe`,
+		`}`,
+		`case {}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:6:17: error: invalid boolean value 'maybe'",
+		"    6 |     ignore-eof  maybe",
+		"      |                 ^^^^^",
+		"      |                 use yes/no",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorWithUnclosedInitSection(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size 1024`,
+		`    stack-size  256`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:4:20: error: unexpected EOF",
+		"    4 |     stack-size  256<EOF>",
+		"      |                    ^^^^^",
+		"      |                    expect '}' to close",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorWithWrongFieldNameInInit(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size 1024`,
+		`    stack-size  256`,
+		`    42          uint8`,
+		`}`,
+		`case {}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:5:5: error: unexpected token type",
+		"    5 |     42          uint8",
+		"      |     ^^",
+		"      |     expect identifier or '}', got INT",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorWithWrongFieldNameFormatInInit(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    0xword       uint8`,
+		`}`,
+		`case {}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:5:5: error: invalid number format '0xword'",
+		"    5 |     0xword       uint8",
+		"      |     ^^^^^^",
+		"      |     hexadecimal number should be 0x[0-9a-fA-F]+",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorWithWrongFieldValueFormatInInit(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256w`,
+		`}`,
+		`case {}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:4:18: error: invalid number format '256w'",
+		"    4 |     stack-size   256w",
+		"      |                  ^^^^",
+		"      |                  should be char [0-9] or underscore '_'",
+	}, "\n")
+
+	checkError(t, input, expected)
+}

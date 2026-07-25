@@ -63,7 +63,12 @@ func (p *Parser) setInitParameter(item *TestDriverItem, name ContextItem[string]
 
 	case FieldWord:
 		var unitType config.MemoryUnitType
-		err = unitType.Set(value.ValueString)
+		vErr := unitType.Set(value.ValueString)
+		if vErr != nil {
+			err = value.Context.Error("invalid parameter value").
+				With("invalid memory unit type '%s'", value.ValueString)
+		}
+
 		if err == nil {
 			item.Init.WordType = NewContextItem(unitType, value.Context)
 		}
@@ -104,6 +109,10 @@ func (p *Parser) parseInitParameters(item *TestDriverItem) (bool, error) {
 
 	case TokenBraceRight:
 		stop = true
+
+	case TokenEOF:
+		err = name.Errorf("unexpected EOF").
+			With("expect '}' to close")
 
 	default:
 		err = name.Errorf("unexpected token type").

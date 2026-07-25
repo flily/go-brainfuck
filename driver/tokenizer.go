@@ -76,11 +76,9 @@ func (e *Element) StringValue() ContextItem[string] {
 }
 
 func (e *Element) IntValue() ContextItem[int64] {
-	var v int64
+	v := int64(e.ValueUint)
 	if e.ValueNegative {
 		v = -int64(e.ValueUint)
-	} else {
-		v = int64(e.ValueUint)
 	}
 
 	return NewContextItem(v, e.Context)
@@ -100,7 +98,7 @@ func (e *Element) BoolValue() (ContextItem[bool], error) {
 
 	default:
 		err := context.NewError(e.Context, "invalid boolean value '%s'", e.ValueString).
-			With("use 'yes'/'no'")
+			With("use yes/no")
 		return NewContextItem(false, e.Context), err
 	}
 }
