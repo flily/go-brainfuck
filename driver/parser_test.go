@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"strings"
+
+	"github.com/flily/go-brainfuck/config"
 )
 
 const (
@@ -151,6 +153,58 @@ func TestParserScriptNameOnly(t *testing.T) {
 
 	expected := &TestDriverItem{
 		ScriptName: NewContextItem("path/to/script.bf", nil),
+		Tests: []TestCase{
+			{Name: NewContextItem("test case 1", nil)},
+		},
+	}
+
+	checkOK(t, input, expected)
+}
+
+func TestParserErrorWrongFieldNameInInit(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size 1024`,
+		`    lorem-ipsum 123`,
+		`}`,
+		`case {}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:4:5: error: unknown field name",
+		"    4 |     lorem-ipsum 123",
+		"      |     ^^^^^^^^^^^",
+		"      |     unknown field name 'lorem-ipsum'",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserWithInitFields(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size   1024`,
+		`    stack-size    256`,
+		`    word          uint8`,
+		`    eof-value     -1`,
+		`    ignore-eof    yes`,
+		`    raise-eof     no`,
+		`}`,
+		`case {}`,
+	}, "\n")
+
+	expected := &TestDriverItem{
+		ScriptName: NewContextItem("path/to/script.bf", nil),
+		Init: InitParameters{
+			MemorySize: NewContextItem(uint64(1024), nil),
+			StackSize:  NewContextItem(uint64(256), nil),
+			WordType:   NewContextItem(config.MemoryUnitTypeUint8, nil),
+			EOFValue:   NewContextItem(int64(-1), nil),
+			IgnoreEOF:  NewContextItem(true, nil),
+			RaiseEOF:   NewContextItem(false, nil),
+		},
 		Tests: []TestCase{
 			{Name: NewContextItem("test case 1", nil)},
 		},

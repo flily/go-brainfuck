@@ -53,6 +53,7 @@ func (p *Parser) parseScript(item *TestDriverItem) error {
 }
 
 func (p *Parser) setInitParameter(item *TestDriverItem, name ContextItem[string], value *Element) error {
+	var err error
 	switch name.Value {
 	case FieldMemorySize:
 		item.Init.MemorySize = value.UintValue()
@@ -62,13 +63,26 @@ func (p *Parser) setInitParameter(item *TestDriverItem, name ContextItem[string]
 
 	case FieldWord:
 		var unitType config.MemoryUnitType
-		err := unitType.Set(value.ValueString)
-		if err != nil {
-			return value.Errorf("invalid memory unit type '%s'", value.ValueString)
+		err = unitType.Set(value.ValueString)
+		if err == nil {
+			item.Init.WordType = NewContextItem(unitType, value.Context)
 		}
-		item.Init.WordType = NewContextItem(unitType, value.Context)
+
+	case FieldEOFValue:
+		item.Init.EOFValue = value.IntValue()
+
+	case FieldIgnoreEOF:
+		item.Init.IgnoreEOF, err = value.BoolValue()
+
+	case FieldRaiseEOF:
+		item.Init.RaiseEOF, err = value.BoolValue()
+
+	default:
+		err = name.Context.Error("unknown field name").
+			With("unknown field name '%s'", name.Value)
 	}
-	return nil
+
+	return err
 }
 
 func (p *Parser) parseInitParameters(item *TestDriverItem) (bool, error) {
