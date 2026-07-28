@@ -141,28 +141,69 @@ func (p *Parser) parseInit(item *TestDriverItem) error {
 	return nil
 }
 
-func (p *Parser) parseCaseParameter(item *TestCase) (bool, error) {
-	token, err := p.nextToken()
-	if err != nil {
-		return true, err
+func (p *Parser) parseNumberList(keyword *Element) ([]ContextItem[int64], error) {
+	if _, err := p.expectToken(TokenBraceLeft); err != nil {
+		return nil, err
 	}
 
-	stop := false
-	switch token.Token {
-	case TokenIdentifier:
+	finish := false
+	var result []ContextItem[int64]
+	for !finish {
+		token, err := p.nextToken()
+		if err != nil {
+			return nil, err
+		}
 
-	case TokenBraceRight:
-		stop = true
+		switch token.Token {
+		case TokenInt:
+			item := token.IntValue()
+			result = append(result, item)
 
-	case TokenEOF:
-		err = token.Errorf("unexpected end of file").
-			With("expect '}' here, got %s", token.Token)
+		case TokenBraceRight:
+			finish = true
+
+		case TokenEOF:
+			err := token.Errorf("unexpected EOF").
+				With("expect '}' to close")
+			return nil, err
+
+		default:
+			err := token.Errorf("unexpected token type").
+				With("expect integer or '}', got %s", token.Token)
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
+func (p *Parser) parseCaseParameters(keyword *Element, item *TestCase) (bool, error) {
+	switch keyword.ValueString {
+	case FieldInput:
+		input, err := p.parseNumberList(keyword)
+		if err != nil {
+			return false, err
+		}
+
+		item.Input = input
+
+	case FieldOutput:
+		output, err := p.parseNumberList(keyword)
+		if err != nil {
+			return false, err
+		}
+
+		item.Output = output
+
+	case FieldMemory:
 
 	default:
-		err = token.Errorf("unexpected token type").
-			With("expect identifier or '}', got %s", token.Token)
+		err := keyword.Errorf("unknown field name").
+			With("use one of 'input', 'output', 'memory', got '%s'", keyword.ValueString)
+		return false, err
 	}
-	return stop, err
+
+	return false, nil
 }
 
 func (p *Parser) parseCase(keyword *Element, item *TestDriverItem) error {
@@ -173,6 +214,7 @@ func (p *Parser) parseCase(keyword *Element, item *TestDriverItem) error {
 	}
 
 	if token.Token == TokenIdentifier {
+		// case with name
 		caseItem.Name = token.StringValue()
 		token, err = p.nextToken()
 		if err != nil {
@@ -186,15 +228,34 @@ func (p *Parser) parseCase(keyword *Element, item *TestDriverItem) error {
 		return err
 	}
 
-	for {
-		stop, err := p.parseCaseParameter(caseItem)
+	finish := false
+	for !finish {
+		token, err := p.nextToken()
 		if err != nil {
 			return err
 		}
 
-		if stop {
-			break
+		switch token.Token {
+		case TokenIdentifier:
+			finish, err = p.parseCaseParameters(token, caseItem)
+			if err != nil {
+				return err
+			}
+
+		case TokenBraceRight:
+			finish = true
+
+		case TokenEOF:
+			err := token.Errorf("unexpected EOF").
+				With("expect '}' to close")
+			return err
+
+		default:
+			err := token.Errorf("unexpected token type").
+				With("expect identifier or '}', got %s", token.Token)
+			return err
 		}
+
 	}
 
 	if caseItem.Name.Context == nil {

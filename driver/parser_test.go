@@ -16,6 +16,15 @@ func testParse(input string) (*TestDriverItem, error) {
 	return Parse(testScriptFilename, []byte(input))
 }
 
+func ctxNums(nums ...int64) []ContextItem[int64] {
+	var result []ContextItem[int64]
+	for _, n := range nums {
+		result = append(result, NewContextItem(n, nil))
+	}
+
+	return result
+}
+
 func checkError(t *testing.T, input string, expected string) {
 	t.Helper()
 
@@ -334,4 +343,37 @@ func TestParserErrorWithWrongFieldValueFormatInInit(t *testing.T) {
 	}, "\n")
 
 	checkError(t, input, expected)
+}
+
+func TestParserWithSimpleCase(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {`,
+		`        1 2 3 4 5 6`,
+		`    }`,
+		`}`,
+	}, "\n")
+
+	expected := &TestDriverItem{
+		ScriptName: NewContextItem("path/to/script.bf", nil),
+		Init: InitParameters{
+			MemorySize: NewContextItem(uint64(1024), nil),
+			StackSize:  NewContextItem(uint64(256), nil),
+			WordType:   NewContextItem(config.MemoryUnitTypeUint8, nil),
+		},
+		Tests: []TestCase{
+			{
+				Name:  NewContextItem("example", nil),
+				Input: ctxNums(1, 2, 3, 4, 5, 6),
+			},
+		},
+	}
+
+	checkOK(t, input, expected)
 }

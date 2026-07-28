@@ -22,6 +22,10 @@ const (
 	FieldEOFValue   = "eof-value"
 	FieldIgnoreEOF  = "ignore-eof"
 	FieldRaiseEOF   = "raise-eof"
+	FieldInput      = "input"
+	FieldOutput     = "output"
+	FieldMemory     = "memory"
+	KeywordAt       = "at"
 )
 
 var requiredSections = []string{
