@@ -141,11 +141,7 @@ func (p *Parser) parseInit(item *TestDriverItem) error {
 	return nil
 }
 
-func (p *Parser) parseNumberList(keyword *Element) ([]ContextItem[int64], error) {
-	if _, err := p.expectToken(TokenBraceLeft); err != nil {
-		return nil, err
-	}
-
+func (p *Parser) parseNumbersInList() ([]ContextItem[int64], error) {
 	finish := false
 	var result []ContextItem[int64]
 	for !finish {
@@ -177,10 +173,70 @@ func (p *Parser) parseNumberList(keyword *Element) ([]ContextItem[int64], error)
 	return result, nil
 }
 
+func (p *Parser) parseNumberList() ([]ContextItem[int64], error) {
+	if _, err := p.expectToken(TokenBraceLeft); err != nil {
+		return nil, err
+	}
+
+	return p.parseNumbersInList()
+}
+
+func (p *Parser) parseCaseMemoryBlock(item *TestCase) error {
+	token, err := p.nextToken()
+	if err != nil {
+		return err
+	}
+
+	if token.Token == TokenIdentifier {
+		if token.ValueString != KeywordAt {
+			err := token.Errorf("syntax error").
+				With("use 'at' to specify memory start address")
+			return err
+		}
+
+		addrToken, err := p.nextToken()
+		if err != nil {
+			return err
+		}
+
+		if addrToken.Token != TokenInt {
+			err := addrToken.Errorf("syntax error").
+				With("expect integer as address")
+			return err
+		}
+
+		if addrToken.ValueNegative {
+			err := addrToken.Errorf("invalid address").
+				With("address MUST BE positive")
+			return err
+		}
+
+		item.MemoryAt = addrToken.UintValue()
+		token, err = p.nextToken()
+		if err != nil {
+			return err
+		}
+	}
+
+	if token.Token != TokenBraceLeft {
+		err := token.Errorf("syntax error").
+			With("expect '{' to start memory block")
+		return err
+	}
+
+	memory, err := p.parseNumbersInList()
+	if err != nil {
+		return err
+	}
+
+	item.Memory = memory
+	return nil
+}
+
 func (p *Parser) parseCaseParameters(keyword *Element, item *TestCase) (bool, error) {
 	switch keyword.ValueString {
 	case FieldInput:
-		input, err := p.parseNumberList(keyword)
+		input, err := p.parseNumberList()
 		if err != nil {
 			return false, err
 		}
@@ -188,7 +244,7 @@ func (p *Parser) parseCaseParameters(keyword *Element, item *TestCase) (bool, er
 		item.Input = input
 
 	case FieldOutput:
-		output, err := p.parseNumberList(keyword)
+		output, err := p.parseNumberList()
 		if err != nil {
 			return false, err
 		}
@@ -196,6 +252,10 @@ func (p *Parser) parseCaseParameters(keyword *Element, item *TestCase) (bool, er
 		item.Output = output
 
 	case FieldMemory:
+		err := p.parseCaseMemoryBlock(item)
+		if err != nil {
+			return false, err
+		}
 
 	default:
 		err := keyword.Errorf("unknown field name").
