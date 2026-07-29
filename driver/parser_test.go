@@ -153,6 +153,42 @@ func TestParserErrorWithMissingRequiredSectionInit(t *testing.T) {
 	checkError(t, input, expected)
 }
 
+func TestParseErrorWithNoBlock(t *testing.T) {
+	input := strings.Join([]string{
+		`script "hello.bf"`,
+		`init memory-size 1024`,
+		`case {}`,
+		``,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:2:6: error: unexpected token type",
+		"    2 | init memory-size 1024",
+		"      |      ^^^^^^^^^^^",
+		"      |      expect BRACE-LEFT here, got IDENTIFIER",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnWrongTokenType(t *testing.T) {
+	input := strings.Join([]string{
+		`script 4ever.bf`,
+		`init {}`,
+		`case {}`,
+		``,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:1:8: error: invalid number format '4ever.bf'",
+		"    1 | script 4ever.bf",
+		"      |        ^^^^^^^^",
+		"      |        should be char [0-9] or underscore '_'",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
 func TestParserScriptNameOnly(t *testing.T) {
 	input := strings.Join([]string{
 		`script "path/to/script.bf"`,
@@ -426,4 +462,107 @@ func TestParserOnSimpleCaseWithMemoryAt(t *testing.T) {
 	}
 
 	checkOK(t, input, expected)
+}
+
+func TestParserErrorOnWrongNumberList(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output 3 4 5 6 7 8`,
+		`    memory {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:9:12: error: unexpected token type",
+		"    9 |     output 3 4 5 6 7 8",
+		"      |            ^",
+		"      |            expect BRACE-LEFT here, got INT",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnWrongFormatInNumberList(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {`,
+		`        3 4x 5 6 7 8`,
+		`    }`,
+		`    memory {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:11: error: invalid number format '4x'",
+		"   10 |         3 4x 5 6 7 8",
+		"      |           ^^",
+		"      |           should be char [0-9] or underscore '_'",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnWrongItemTypeInNumberList(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {`,
+		`        3 four 5 6 7 8`,
+		`    }`,
+		`    memory {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:11: error: unexpected token type",
+		"   10 |         3 four 5 6 7 8",
+		"      |           ^^^^",
+		"      |           expect integer or '}', got IDENTIFIER",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnUnclosedNumberList(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {`,
+		`        3 4 5 6 7 8`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:20: error: unexpected EOF",
+		"   10 |         3 4 5 6 7 8<EOF>",
+		"      |                    ^^^^^",
+		"      |                    expect '}' to close",
+	}, "\n")
+
+	checkError(t, input, expected)
 }
