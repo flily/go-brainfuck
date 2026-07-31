@@ -489,7 +489,34 @@ func TestParserErrorOnWrongNumberList(t *testing.T) {
 	checkError(t, input, expected)
 }
 
-func TestParserErrorOnWrongFormatInNumberList(t *testing.T) {
+func TestParserErrorOnWrongFormatInNumberListInput(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {`,
+		`        3 4x 5 6 7 8`,
+		`    }`,
+		`    output {}`,
+		`    memory {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:9:11: error: invalid number format '4x'",
+		"    9 |         3 4x 5 6 7 8",
+		"      |           ^^",
+		"      |           should be char [0-9] or underscore '_'",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnWrongFormatInNumberListOutput(t *testing.T) {
 	input := strings.Join([]string{
 		`script "path/to/script.bf"`,
 		`init {`,
@@ -562,6 +589,261 @@ func TestParserErrorOnUnclosedNumberList(t *testing.T) {
 		"   10 |         3 4 5 6 7 8<EOF>",
 		"      |                    ^^^^^",
 		"      |                    expect '}' to close",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnMemoryBlockNoBrace(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+		`    memory 3 4 5 6 7 8`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:12: error: syntax error",
+		"   10 |     memory 3 4 5 6 7 8",
+		"      |            ^",
+		"      |            expect '{' to start memory block",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnMemoryBlockWrongStartTokenFormat1(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+		`    memory 0xqwer {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:12: error: invalid number format '0xqwer'",
+		"   10 |     memory 0xqwer {}",
+		"      |            ^^^^^^",
+		"      |            hexadecimal number should be 0x[0-9a-fA-F]+",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnMemoryBlockWrongStartTokenFormat2(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+		`    memory at 42 0xqwer {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:18: error: invalid number format '0xqwer'",
+		"   10 |     memory at 42 0xqwer {}",
+		"      |                  ^^^^^^",
+		"      |                  hexadecimal number should be 0x[0-9a-fA-F]+",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnMemoryBlockWrongAtCommand(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+		`    memory on 42 {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:12: error: syntax error",
+		"   10 |     memory on 42 {}",
+		"      |            ^^",
+		"      |            use 'at' to specify memory start address",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnMemoryBlockWrongAtCommandWrongAddressFormat(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+		`    memory at 0xqwer {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:15: error: invalid number format '0xqwer'",
+		"   10 |     memory at 0xqwer {}",
+		"      |               ^^^^^^",
+		"      |               hexadecimal number should be 0x[0-9a-fA-F]+",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnMemoryBlockWrongAtCommandWrongAddressType(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+		`    memory at zero {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:15: error: syntax error",
+		"   10 |     memory at zero {}",
+		"      |               ^^^^",
+		"      |               expect integer as address",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnMemoryBlockWrongAtCommandNegativeAddress(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+		`    memory at -42 {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:15: error: invalid address",
+		"   10 |     memory at -42 {}",
+		"      |               ^^^",
+		"      |               address MUST BE positive",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnMemoryBlockWithWrongNumberList(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+		`    memory at 42 {`,
+		`        3 four 5 6 7 8`,
+		`    }`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:11:11: error: unexpected token type",
+		"   11 |         3 four 5 6 7 8",
+		"      |           ^^^^",
+		"      |           expect integer or '}', got IDENTIFIER",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnMemoryBlockWithUnknownField(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {`,
+		`        1 2 3 4 5 6`,
+		`    }`,
+		`    output {`,
+		`        2 3 4 5 6 7`,
+		`    }`,
+		`    memory at 42 {`,
+		`        3 4 5 6 7 8`,
+		`    }`,
+		`    lorem ipsum`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:17:5: error: unknown field name",
+		"   17 |     lorem ipsum",
+		"      |     ^^^^^",
+		"      |     use one of 'input', 'output', 'memory', got 'lorem'",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnCaseName(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case 0xqwer {}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:7:6: error: invalid number format '0xqwer'",
+		"    7 | case 0xqwer {}",
+		"      |      ^^^^^^",
+		"      |      hexadecimal number should be 0x[0-9a-fA-F]+",
 	}, "\n")
 
 	checkError(t, input, expected)
