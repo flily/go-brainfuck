@@ -370,7 +370,8 @@ func (p *Parser) Parse() (*TestDriverItem, error) {
 		}
 
 		if token.Token != TokenIdentifier {
-			err = token.Errorf("expect identifier here, got %s", token.Token)
+			err = token.Errorf("invalid identifier").
+				With("expect identifier here, got %s", token.Token)
 			break
 		}
 

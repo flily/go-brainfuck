@@ -848,3 +848,149 @@ func TestParserErrorOnCaseName(t *testing.T) {
 
 	checkError(t, input, expected)
 }
+
+func TestParserErrorOnCaseWithoutWrongFormat(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example 0xqwer`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:7:14: error: invalid number format '0xqwer'",
+		"    7 | case example 0xqwer",
+		"      |              ^^^^^^",
+		"      |              hexadecimal number should be 0x[0-9a-fA-F]+",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnCaseWithoutBlock(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example input { 1 2 3 4 5 6 }`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:7:14: error: unexpected token found",
+		"    7 | case example input { 1 2 3 4 5 6 }",
+		"      |              ^^^^^",
+		"      |              expect '{' here, got IDENTIFIER",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnCaseWithWrongFieldNameFormat(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    0xqwer {}`,
+		`    input {}`,
+		`    output {}`,
+		`    memory {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:8:5: error: invalid number format '0xqwer'",
+		"    8 |     0xqwer {}",
+		"      |     ^^^^^^",
+		"      |     hexadecimal number should be 0x[0-9a-fA-F]+",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnCaseWithUnclosedBlock(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:9:14: error: unexpected EOF",
+		"    9 |     output {}<EOF>",
+		"      |              ^^^^^",
+		"      |              expect '}' to close",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorOnCaseWithUnexpectedFieldName(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+		`    42 {}`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:5: error: unexpected token type",
+		"   10 |     42 {}",
+		"      |     ^^",
+		"      |     expect identifier or '}', got INT",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorWithInvalidKeyword1(t *testing.T) {
+	input := strings.Join([]string{
+		`0xqwer`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:1:1: error: invalid number format '0xqwer'",
+		"    1 | 0xqwer",
+		"      | ^^^^^^",
+		"      | hexadecimal number should be 0x[0-9a-fA-F]+",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
+func TestParserErrorWithInvalidKeyword2(t *testing.T) {
+	input := strings.Join([]string{
+		`42`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:1:1: error: invalid identifier",
+		"    1 | 42",
+		"      | ^^",
+		"      | expect identifier here, got INT",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
