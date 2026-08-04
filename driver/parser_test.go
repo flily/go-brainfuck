@@ -198,8 +198,10 @@ func TestParserScriptNameOnly(t *testing.T) {
 
 	expected := &TestDriverItem{
 		ScriptName: NewContextItem("path/to/script.bf", nil),
-		Tests: []TestCase{
-			{Name: NewContextItem("test case 1", nil)},
+		Tests: []ContextItem[TestCase]{
+			NewContextItem(
+				TestCase{Name: NewContextItem("test case 1", nil)},
+				nil),
 		},
 	}
 
@@ -242,16 +244,16 @@ func TestParserWithInitFields(t *testing.T) {
 
 	expected := &TestDriverItem{
 		ScriptName: NewContextItem("path/to/script.bf", nil),
-		Init: InitParameters{
+		Init: NewContextItem(InitParameters{
 			MemorySize: NewContextItem(uint64(1024), nil),
 			StackSize:  NewContextItem(uint64(256), nil),
 			WordType:   NewContextItem(config.MemoryUnitTypeUint8, nil),
 			EOFValue:   NewContextItem(int64(-1), nil),
 			IgnoreEOF:  NewContextItem(true, nil),
 			RaiseEOF:   NewContextItem(false, nil),
-		},
-		Tests: []TestCase{
-			{Name: NewContextItem("test case 1", nil)},
+		}, nil),
+		Tests: []ContextItem[TestCase]{
+			NewContextItem(TestCase{Name: NewContextItem("test case 1", nil)}, nil),
 		},
 	}
 
@@ -404,18 +406,18 @@ func TestParserOnSimpleCase(t *testing.T) {
 
 	expected := &TestDriverItem{
 		ScriptName: NewContextItem("path/to/script.bf", nil),
-		Init: InitParameters{
+		Init: NewContextItem(InitParameters{
 			MemorySize: NewContextItem(uint64(1024), nil),
 			StackSize:  NewContextItem(uint64(256), nil),
 			WordType:   NewContextItem(config.MemoryUnitTypeUint8, nil),
-		},
-		Tests: []TestCase{
-			{
+		}, nil),
+		Tests: []ContextItem[TestCase]{
+			NewContextItem(TestCase{
 				Name:   NewContextItem("example", nil),
 				Input:  ctxNums(1, 2, 3, 4, 5, 6),
 				Output: ctxNums(2, 3, 4, 5, 6, 7),
 				Memory: ctxNums(3, 4, 5, 6, 7, 8),
-			},
+			}, nil),
 		},
 	}
 
@@ -445,19 +447,19 @@ func TestParserOnSimpleCaseWithMemoryAt(t *testing.T) {
 
 	expected := &TestDriverItem{
 		ScriptName: NewContextItem("path/to/script.bf", nil),
-		Init: InitParameters{
+		Init: NewContextItem(InitParameters{
 			MemorySize: NewContextItem(uint64(1024), nil),
 			StackSize:  NewContextItem(uint64(256), nil),
 			WordType:   NewContextItem(config.MemoryUnitTypeUint8, nil),
-		},
-		Tests: []TestCase{
-			{
+		}, nil),
+		Tests: []ContextItem[TestCase]{
+			NewContextItem(TestCase{
 				Name:     NewContextItem("example", nil),
 				Input:    ctxNums(1, 2, 3, 4, 5, 6),
 				Output:   ctxNums(2, 3, 4, 5, 6, 7),
 				Memory:   ctxNums(3, 4, 5, 6, 7, 8),
 				MemoryAt: NewContextItem[uint64](42, nil),
-			},
+			}, nil),
 		},
 	}
 

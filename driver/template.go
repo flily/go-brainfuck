@@ -65,7 +65,7 @@ type TestCase struct {
 	MemoryAt ContextItem[uint64]
 }
 
-func NewTestCase(name string, ctx *context.Context) TestCase {
+func NewTestCase(name string, ctx *context.Context) ContextItem[TestCase] {
 	c := TestCase{
 		Name:     NewContextItem(name, ctx),
 		Input:    make([]ContextItem[int64], 0),
@@ -74,7 +74,7 @@ func NewTestCase(name string, ctx *context.Context) TestCase {
 		MemoryAt: NewContextItem[uint64](0, ctx),
 	}
 
-	return c
+	return NewContextItem(c, ctx)
 }
 
 func (c *TestCase) Equal(o TestCase) bool {
@@ -140,8 +140,8 @@ func (p *InitParameters) Equal(o InitParameters) bool {
 
 type TestDriverItem struct {
 	ScriptName ContextItem[string]
-	Init       InitParameters
-	Tests      []TestCase
+	Init       ContextItem[InitParameters]
+	Tests      []ContextItem[TestCase]
 }
 
 func (i *TestDriverItem) Equal(o *TestDriverItem) bool {
@@ -149,7 +149,7 @@ func (i *TestDriverItem) Equal(o *TestDriverItem) bool {
 		return false
 	}
 
-	if !i.Init.Equal(o.Init) {
+	if !i.Init.Value.Equal(o.Init.Value) {
 		return false
 	}
 
@@ -158,7 +158,7 @@ func (i *TestDriverItem) Equal(o *TestDriverItem) bool {
 	}
 
 	for idx, test := range i.Tests {
-		if !test.Equal(o.Tests[idx]) {
+		if !test.Value.Equal(o.Tests[idx].Value) {
 			return false
 		}
 	}

@@ -23,54 +23,54 @@ func TestContextItemUnpackValues(t *testing.T) {
 
 func TestTestCaseEqual(t *testing.T) {
 	expected := NewTestCase("example", nil)
-	expected.Input = []ContextItem[int64]{
+	expected.Value.Input = []ContextItem[int64]{
 		NewContextItem[int64](1, nil),
 		NewContextItem[int64](2, nil),
 	}
-	expected.Output = []ContextItem[int64]{
+	expected.Value.Output = []ContextItem[int64]{
 		NewContextItem[int64](11, nil),
 	}
-	expected.Memory = []ContextItem[int64]{
+	expected.Value.Memory = []ContextItem[int64]{
 		NewContextItem[int64](21, nil),
 		NewContextItem[int64](22, nil),
 	}
-	expected.MemoryAt = NewContextItem[uint64](1024, nil)
+	expected.Value.MemoryAt = NewContextItem[uint64](1024, nil)
 
 	o := NewTestCase("lorem ipsum", nil)
-	if expected.Equal(o) {
+	if expected.Value.Equal(o.Value) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Name.Value = "example"
-	if expected.Equal(o) {
+	o.Value.Name.Value = "example"
+	if expected.Value.Equal(o.Value) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Input = []ContextItem[int64]{
+	o.Value.Input = []ContextItem[int64]{
 		NewContextItem[int64](1, nil),
 		NewContextItem[int64](2, nil),
 	}
-	if expected.Equal(o) {
+	if expected.Value.Equal(o.Value) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Output = []ContextItem[int64]{
+	o.Value.Output = []ContextItem[int64]{
 		NewContextItem[int64](11, nil),
 	}
-	if expected.Equal(o) {
+	if expected.Value.Equal(o.Value) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Memory = []ContextItem[int64]{
+	o.Value.Memory = []ContextItem[int64]{
 		NewContextItem[int64](21, nil),
 		NewContextItem[int64](22, nil),
 	}
-	if expected.Equal(o) {
+	if expected.Value.Equal(o.Value) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.MemoryAt = NewContextItem[uint64](1024, nil)
-	if !expected.Equal(o) {
+	o.Value.MemoryAt = NewContextItem[uint64](1024, nil)
+	if !expected.Value.Equal(o.Value) {
 		t.Fatalf("expected equal, got not equal")
 	}
 }
@@ -125,15 +125,15 @@ func TestInitParametersEqual(t *testing.T) {
 func TestTestDriverItemEqual(t *testing.T) {
 	expected := &TestDriverItem{
 		ScriptName: NewContextItem("script", nil),
-		Init: InitParameters{
+		Init: NewContextItem(InitParameters{
 			MemorySize: NewContextItem[uint64](1024, nil),
 			StackSize:  NewContextItem[uint64](512, nil),
 			WordType:   NewContextItem(config.MemoryUnitTypeUint8, nil),
 			EOFValue:   NewContextItem[int64](-1, nil),
 			IgnoreEOF:  NewContextItem(true, nil),
 			RaiseEOF:   NewContextItem(true, nil),
-		},
-		Tests: []TestCase{
+		}, nil),
+		Tests: []ContextItem[TestCase]{
 			NewTestCase("test1", nil),
 			NewTestCase("test2", nil),
 		},
@@ -149,24 +149,24 @@ func TestTestDriverItemEqual(t *testing.T) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Init = InitParameters{
+	o.Init = NewContextItem(InitParameters{
 		MemorySize: NewContextItem[uint64](1024, nil),
 		StackSize:  NewContextItem[uint64](512, nil),
 		WordType:   NewContextItem(config.MemoryUnitTypeUint8, nil),
 		EOFValue:   NewContextItem[int64](-1, nil),
 		IgnoreEOF:  NewContextItem(true, nil),
 		RaiseEOF:   NewContextItem(true, nil),
-	}
+	}, nil)
 	if expected.Equal(o) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Tests = make([]TestCase, 0)
+	o.Tests = make([]ContextItem[TestCase], 0)
 	if expected.Equal(o) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Tests = []TestCase{
+	o.Tests = []ContextItem[TestCase]{
 		NewTestCase("test2", nil),
 		NewTestCase("test1", nil),
 	}
@@ -174,7 +174,7 @@ func TestTestDriverItemEqual(t *testing.T) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Tests = []TestCase{
+	o.Tests = []ContextItem[TestCase]{
 		NewTestCase("test1", nil),
 		NewTestCase("test2", nil),
 	}

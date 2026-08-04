@@ -11,15 +11,17 @@ type Parser struct {
 	tokenizer *Tokenizer
 }
 
-func NewParser(filename string, data []byte) *Parser {
-	file := context.ReadFileData(filename, data)
-	tokenizer := NewTokenizer(file)
-
+func NewParser(filename string, file *context.FileContext) *Parser {
 	p := &Parser{
-		tokenizer: tokenizer,
+		tokenizer: NewTokenizer(file),
 	}
 
 	return p
+}
+
+func NewParserWith(filename string, data []byte) *Parser {
+	file := context.ReadFileData(filename, data)
+	return NewParser(filename, file)
 }
 
 func (p *Parser) nextToken() (*Element, error) {
@@ -56,10 +58,10 @@ func (p *Parser) setInitParameter(item *TestDriverItem, name ContextItem[string]
 	var err error
 	switch name.Value {
 	case FieldMemorySize:
-		item.Init.MemorySize = value.UintValue()
+		item.Init.Value.MemorySize = value.UintValue()
 
 	case FieldStackSize:
-		item.Init.StackSize = value.UintValue()
+		item.Init.Value.StackSize = value.UintValue()
 
 	case FieldWord:
 		var unitType config.MemoryUnitType
@@ -70,17 +72,17 @@ func (p *Parser) setInitParameter(item *TestDriverItem, name ContextItem[string]
 		}
 
 		if err == nil {
-			item.Init.WordType = NewContextItem(unitType, value.Context)
+			item.Init.Value.WordType = NewContextItem(unitType, value.Context)
 		}
 
 	case FieldEOFValue:
-		item.Init.EOFValue = value.IntValue()
+		item.Init.Value.EOFValue = value.IntValue()
 
 	case FieldIgnoreEOF:
-		item.Init.IgnoreEOF, err = value.BoolValue()
+		item.Init.Value.IgnoreEOF, err = value.BoolValue()
 
 	case FieldRaiseEOF:
-		item.Init.RaiseEOF, err = value.BoolValue()
+		item.Init.Value.RaiseEOF, err = value.BoolValue()
 
 	default:
 		err = name.Context.Error("unknown field name").
@@ -323,7 +325,7 @@ func (p *Parser) parseCase(keyword *Element, item *TestDriverItem) error {
 		caseItem.Name = NewContextItem(name, keyword.Context)
 	}
 
-	item.Tests = append(item.Tests, *caseItem)
+	item.Tests = append(item.Tests, NewContextItem(*caseItem, keyword.Context))
 	return nil
 }
 
@@ -347,7 +349,7 @@ func checkRequiredFirstSection(required map[string]bool, elem *Element) error {
 
 func (p *Parser) Parse() (*TestDriverItem, error) {
 	item := &TestDriverItem{
-		Tests: make([]TestCase, 0, 16),
+		Tests: make([]ContextItem[TestCase], 0, 16),
 	}
 
 	sectionAppearances := map[string]bool{
@@ -424,6 +426,6 @@ func (p *Parser) Parse() (*TestDriverItem, error) {
 }
 
 func Parse(filename string, data []byte) (*TestDriverItem, error) {
-	parser := NewParser(filename, data)
+	parser := NewParserWith(filename, data)
 	return parser.Parse()
 }
