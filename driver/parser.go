@@ -387,6 +387,7 @@ func (p *Parser) Parse() (*TestDriverItem, error) {
 				break
 			}
 
+			item.Init.Context = token.Context
 			err = p.parseInit(item)
 			sectionAppearances[SectionInit] = true
 
