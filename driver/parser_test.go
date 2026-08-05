@@ -16,13 +16,13 @@ func testParse(input string) (*TestDriverItem, error) {
 	return Parse(testScriptFilename, []byte(input))
 }
 
-func ctxNums(nums ...int64) []ContextItem[int64] {
+func ctxNums(nums ...int64) ContextItem[[]ContextItem[int64]] {
 	var result []ContextItem[int64]
 	for _, n := range nums {
 		result = append(result, NewContextItem(n, nil))
 	}
 
-	return result
+	return NewContextItem(result, nil)
 }
 
 func checkError(t *testing.T, input string, expected string) {

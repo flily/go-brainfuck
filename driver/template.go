@@ -59,18 +59,18 @@ func UnpackValues[T any](items []ContextItem[T]) []T {
 
 type TestCase struct {
 	Name     ContextItem[string]
-	Input    []ContextItem[int64]
-	Output   []ContextItem[int64]
-	Memory   []ContextItem[int64]
+	Input    ContextItem[[]ContextItem[int64]]
+	Output   ContextItem[[]ContextItem[int64]]
+	Memory   ContextItem[[]ContextItem[int64]]
 	MemoryAt ContextItem[uint64]
 }
 
 func NewTestCase(name string, ctx *context.Context) ContextItem[TestCase] {
 	c := TestCase{
 		Name:     NewContextItem(name, ctx),
-		Input:    make([]ContextItem[int64], 0),
-		Output:   make([]ContextItem[int64], 0),
-		Memory:   make([]ContextItem[int64], 0),
+		Input:    NewContextItem(make([]ContextItem[int64], 0), ctx),
+		Output:   NewContextItem(make([]ContextItem[int64], 0), ctx),
+		Memory:   NewContextItem(make([]ContextItem[int64], 0), ctx),
 		MemoryAt: NewContextItem[uint64](0, ctx),
 	}
 
@@ -82,15 +82,15 @@ func (c *TestCase) Equal(o TestCase) bool {
 		return false
 	}
 
-	if !slices.Equal(UnpackValues(c.Input), UnpackValues(o.Input)) {
+	if !slices.Equal(UnpackValues(c.Input.Value), UnpackValues(o.Input.Value)) {
 		return false
 	}
 
-	if !slices.Equal(UnpackValues(c.Output), UnpackValues(o.Output)) {
+	if !slices.Equal(UnpackValues(c.Output.Value), UnpackValues(o.Output.Value)) {
 		return false
 	}
 
-	if !slices.Equal(UnpackValues(c.Memory), UnpackValues(o.Memory)) {
+	if !slices.Equal(UnpackValues(c.Memory.Value), UnpackValues(o.Memory.Value)) {
 		return false
 	}
 

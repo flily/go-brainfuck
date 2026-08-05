@@ -23,17 +23,17 @@ func TestContextItemUnpackValues(t *testing.T) {
 
 func TestTestCaseEqual(t *testing.T) {
 	expected := NewTestCase("example", nil)
-	expected.Value.Input = []ContextItem[int64]{
+	expected.Value.Input = NewContextItem([]ContextItem[int64]{
 		NewContextItem[int64](1, nil),
 		NewContextItem[int64](2, nil),
-	}
-	expected.Value.Output = []ContextItem[int64]{
+	}, nil)
+	expected.Value.Output = NewContextItem([]ContextItem[int64]{
 		NewContextItem[int64](11, nil),
-	}
-	expected.Value.Memory = []ContextItem[int64]{
+	}, nil)
+	expected.Value.Memory = NewContextItem([]ContextItem[int64]{
 		NewContextItem[int64](21, nil),
 		NewContextItem[int64](22, nil),
-	}
+	}, nil)
 	expected.Value.MemoryAt = NewContextItem[uint64](1024, nil)
 
 	o := NewTestCase("lorem ipsum", nil)
@@ -46,25 +46,25 @@ func TestTestCaseEqual(t *testing.T) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Value.Input = []ContextItem[int64]{
+	o.Value.Input = NewContextItem([]ContextItem[int64]{
 		NewContextItem[int64](1, nil),
 		NewContextItem[int64](2, nil),
-	}
+	}, nil)
 	if expected.Value.Equal(o.Value) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Value.Output = []ContextItem[int64]{
+	o.Value.Output = NewContextItem([]ContextItem[int64]{
 		NewContextItem[int64](11, nil),
-	}
+	}, nil)
 	if expected.Value.Equal(o.Value) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
-	o.Value.Memory = []ContextItem[int64]{
+	o.Value.Memory = NewContextItem([]ContextItem[int64]{
 		NewContextItem[int64](21, nil),
 		NewContextItem[int64](22, nil),
-	}
+	}, nil)
 	if expected.Value.Equal(o.Value) {
 		t.Fatalf("expected not equal, got equal")
 	}

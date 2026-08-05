@@ -183,7 +183,7 @@ func (p *Parser) parseNumberList() ([]ContextItem[int64], error) {
 	return p.parseNumbersInList()
 }
 
-func (p *Parser) parseCaseMemoryBlock(item *TestCase) error {
+func (p *Parser) parseCaseMemoryBlock(keyword *Element, item *TestCase) error {
 	token, err := p.nextToken()
 	if err != nil {
 		return err
@@ -231,7 +231,7 @@ func (p *Parser) parseCaseMemoryBlock(item *TestCase) error {
 		return err
 	}
 
-	item.Memory = memory
+	item.Memory = NewContextItem(memory, keyword.Context)
 	return nil
 }
 
@@ -243,7 +243,7 @@ func (p *Parser) parseCaseParameters(keyword *Element, item *TestCase) (bool, er
 			return false, err
 		}
 
-		item.Input = input
+		item.Input = NewContextItem(input, keyword.Context)
 
 	case FieldOutput:
 		output, err := p.parseNumberList()
@@ -251,10 +251,10 @@ func (p *Parser) parseCaseParameters(keyword *Element, item *TestCase) (bool, er
 			return false, err
 		}
 
-		item.Output = output
+		item.Output = NewContextItem(output, keyword.Context)
 
 	case FieldMemory:
-		err := p.parseCaseMemoryBlock(item)
+		err := p.parseCaseMemoryBlock(keyword, item)
 		if err != nil {
 			return false, err
 		}
