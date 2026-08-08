@@ -8,6 +8,10 @@ import (
 
 func TestBufferedReaderRead(t *testing.T) {
 	reader := NewBufferedInput[int32](1, 2, 3)
+	if reader.Empty() {
+		t.Fatalf("expected reader to be non-empty, but it is empty")
+	}
+
 	expected := []int32{1, 2, 3}
 	for i, exp := range expected {
 		value, err := reader.Read()
@@ -22,6 +26,10 @@ func TestBufferedReaderRead(t *testing.T) {
 	value, err := reader.Read()
 	if err != io.EOF {
 		t.Fatalf("expected EOF error, got %v", err)
+	}
+
+	if !reader.Empty() {
+		t.Fatalf("expected reader to be empty, but it is not")
 	}
 
 	if value != 0 {

@@ -33,6 +33,10 @@ func (r *BufferedReader[T]) Read() (T, error) {
 	return value, nil
 }
 
+func (r *BufferedReader[T]) Empty() bool {
+	return r.Offset >= len(r.Data)
+}
+
 type BufferedWriter[T MemoryUnit] struct {
 	Data []T
 }

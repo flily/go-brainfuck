@@ -1,9 +1,14 @@
 package main
 
 import (
+	"fmt"
+
+	"github.com/fatih/color"
 	"github.com/flily/go-brainfuck/config"
 	"github.com/flily/go-brainfuck/context"
 	"github.com/flily/go-brainfuck/driver"
+	"github.com/flily/go-brainfuck/infra"
+	"github.com/flily/go-brainfuck/iofmt"
 	"github.com/flily/go-brainfuck/parser"
 	"github.com/flily/go-brainfuck/vm"
 )
@@ -23,7 +28,64 @@ func initDriver(filename string) (*driver.TestDriverItem, error) {
 	return driverItem, nil
 }
 
-func genericRunCase[T driver.MemoryUnit](item *driver.TestDriverItem) error {
+func convertList[T infra.MemoryUnit, U infra.MemoryUnit](origin []T) []U {
+	h := make([]U, len(origin))
+	for i, v := range origin {
+		h[i] = U(v)
+	}
+
+	return h
+}
+
+func initVMF[T infra.MemoryUnit](item *driver.TestDriverItem, codemap *vm.CodeMap) *vm.VM[T] {
+	bfvm := vm.New[T](int(item.Init.Value.MemorySize.Value), int(item.Init.Value.StackSize.Value))
+	bfvm.LoadHandlers(vm.GetStandardInstructionSetHandlers[T]())
+	bfvm.LoadCode(codemap)
+
+	return bfvm
+}
+
+func runForCase[T infra.MemoryUnit](item *driver.TestDriverItem, codemap *vm.CodeMap, kase *driver.ContextItem[driver.TestCase]) error {
+	bfvm := initVMF[T](item, codemap)
+
+	inputData := driver.UnpackValues(kase.Value.Input.Value)
+	input := iofmt.NewBufferedReader(convertList[int64, T](inputData))
+	output := iofmt.NewBufferedWriter[T](0)
+
+	bfvm.SetInput(input)
+	bfvm.SetOutput(output)
+
+	fmt.Printf("case %s on script '%s'\n",
+		color.CyanString(kase.Value.Name.Value),
+		color.YellowString(item.ScriptName.Value))
+	err := bfvm.Run()
+	if err != nil {
+		fmt.Printf("  - run %s\n", color.RedString("failed"))
+		return err
+	}
+	fmt.Printf("  - run %s\n", color.GreenString("success"))
+
+	if !input.Empty() {
+		offset := input.Offset
+		remaining := kase.Value.Input.Value[offset]
+		err := remaining.Context.Error("input data not read by program").
+			With("remaining from here")
+		return err
+	}
+
+	outputGot := output.Dump()
+
+	outputExp := driver.UnpackValues(kase.Value.Output.Value)
+	if len(outputGot) != len(outputExp) {
+		err = kase.Context.Error("output length mismatch").
+			With("expected %d, got %d", len(outputExp), len(outputGot))
+		return err
+	}
+
+	return nil
+}
+
+func genericRunCase[T infra.MemoryUnit](item *driver.TestDriverItem) error {
 	scriptFilename := item.ScriptName.Value
 	scriptCtx, err := context.ReadFile(scriptFilename)
 	if err != nil {
@@ -38,13 +100,11 @@ func genericRunCase[T driver.MemoryUnit](item *driver.TestDriverItem) error {
 		return err
 	}
 
-	bfvm := vm.New[T](int(item.Init.Value.MemorySize.Value), int(item.Init.Value.StackSize.Value))
-	bfvm.LoadHandlers(vm.GetStandardInstructionSetHandlers[T]())
-	bfvm.LoadCode(codemap)
-
-	err = bfvm.Run()
-	if err != nil {
-		return err
+	for _, test := range item.Tests {
+		err := runForCase[T](item, codemap, &test)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
