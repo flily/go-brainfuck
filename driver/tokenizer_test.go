@@ -332,6 +332,42 @@ func TestTokenizerScanUnsignedNumberOnlyZero(t *testing.T) {
 		CheckEOF(position2)
 }
 
+func TestTokenizerScanUnsignedNumberWithManyZeros(t *testing.T) {
+	input := "0 0 0 0"
+	position1 := strings.Join([]string{
+		"    1 | 0 0 0 0",
+		"      | ^",
+		"      | here",
+	}, "\n")
+	position2 := strings.Join([]string{
+		"    1 | 0 0 0 0",
+		"      |   ^",
+		"      |   here",
+	}, "\n")
+	position3 := strings.Join([]string{
+		"    1 | 0 0 0 0",
+		"      |     ^",
+		"      |     here",
+	}, "\n")
+	position4 := strings.Join([]string{
+		"    1 | 0 0 0 0",
+		"      |       ^",
+		"      |       here",
+	}, "\n")
+	position5 := strings.Join([]string{
+		"    1 | 0 0 0 0<EOF>",
+		"      |        ^^^^^",
+		"      |        here",
+	}, "\n")
+
+	newTokenizerCase(t, input).
+		CheckUint("0", 0, position1).
+		CheckUint("0", 0, position2).
+		CheckUint("0", 0, position3).
+		CheckUint("0", 0, position4).
+		CheckEOF(position5)
+}
+
 func TestTokenizerScanNumberWithUnderscore(t *testing.T) {
 	input := "1_000_000 0xdead_BEEF 0770_660"
 	position1 := strings.Join([]string{

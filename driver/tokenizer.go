@@ -347,6 +347,9 @@ func (t *Tokenizer) scanPositiveNumber(startIndex int, negative bool) (*Element,
 	case '1', '2', '3', '4', '5', '6', '7':
 		return t.scanOctalNumber(startIndex+1, negative)
 
+	case ' ', '\t', '_':
+		return t.scanUnsignedNumber(startIndex, negative)
+
 	default:
 		content, ctx := t.scanWord()
 		err := context.NewError(ctx, "invalid number format '%s'", content).
