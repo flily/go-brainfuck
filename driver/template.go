@@ -48,6 +48,10 @@ func NewContextItem[T any](content T, ctx *context.Context) ContextItem[T] {
 	return item
 }
 
+func (i *ContextItem[T]) Valid() bool {
+	return i.Context != nil
+}
+
 func UnpackValues[T any](items []ContextItem[T]) []T {
 	values := make([]T, len(items))
 	for i, item := range items {
