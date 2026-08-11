@@ -1,8 +1,9 @@
 package driver
 
 import (
-	"strings"
 	"testing"
+
+	"strings"
 
 	"github.com/flily/go-brainfuck/context"
 )
@@ -82,7 +83,206 @@ func TestSimpleCase(t *testing.T) {
 	}.Ok(t)
 }
 
-func TestCaseWithMemoryTooSmall(t *testing.T) {
+func TestCaseSimpleIO(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   1024",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    input {",
+			"        42",
+			"    }",
+			"    output {",
+			"        45",
+			"    }",
+			"}",
+		},
+		code: []string{
+			",+++.",
+		},
+	}.Ok(t)
+}
+
+func TestCaseErrorWithCompilationError(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   1024",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    input {",
+			"        42",
+			"    }",
+			"    output {",
+			"        45",
+			"    }",
+			"}",
+		},
+		code: []string{
+			",+++[.",
+		},
+		expected: []string{
+			"test.bf:1:5: error: unclosed loop bracket",
+			"    1 | ,+++[.",
+			"      |     ^",
+			"      |     no matched ']' for this",
+		},
+	}.Error(t)
+}
+
+func TestCaseErrorWithInputNotRead(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   1024",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    input {",
+			"        42 43",
+			"    }",
+			"    output {",
+			"        45",
+			"    }",
+			"}",
+		},
+		code: []string{
+			",+++.",
+		},
+		expected: []string{
+			"test.bftest:10:12: error: input data not read by program",
+			"   10 |         42 43",
+			"      |            ^^",
+			"      |            data not read by program",
+		},
+	}.Error(t)
+}
+
+func TestCaseErrorWithOutputLessThanExpected(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   1024",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    output {",
+			"        3 4 5 6",
+			"    }",
+			"}",
+		},
+		code: []string{
+			"+++.+.",
+		},
+		expected: []string{
+			"test.bftest:10:13: error: output data less than expected",
+			"   10 |         3 4 5 6",
+			"      |             ^",
+			"      |             output 2 data items, expect 4",
+		},
+	}.Error(t)
+}
+
+func TestCaseErrorWithOutputMoreThanExpected(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   1024",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    output {",
+			"        3 4 5 6",
+			"    }",
+			"}",
+		},
+		code: []string{
+			"+++.+.+.+.+.",
+		},
+		expected: []string{
+			"test.bftest:10:15: error: output data more than expected",
+			"   10 |         3 4 5 6",
+			"      |               ^",
+			"      |               output 5 data items, expect 4",
+		},
+	}.Error(t)
+}
+
+func TestCaseErrorWithOutputValueMismatch(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   1024",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    output {",
+			"        3 4 9 6",
+			"    }",
+			"}",
+		},
+		code: []string{
+			"+++.+.+.+.",
+		},
+		expected: []string{
+			"test.bftest:10:13: error: output value mismatch",
+			"   10 |         3 4 9 6",
+			"      |             ^",
+			"      |             got 5",
+		},
+	}.Error(t)
+}
+
+func TestCaseErrorWithMemoryBaseOutOfRange(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   2",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    memory at 3 {",
+			"        1 2 3 4",
+			"    }",
+			"}",
+		},
+		code: []string{
+			"+++++--",
+		},
+		expected: []string{
+			"test.bftest:9:15: error: memory base out of range",
+			"    9 |     memory at 3 {",
+			"      |               ^",
+			"      |               vm memory size is set to 2",
+		},
+	}.Error(t)
+}
+
+func TestCaseErrorWithMemoryTooSmall(t *testing.T) {
 	testDriverCase{
 		driver: []string{
 			`script "test.bf"`,
@@ -106,6 +306,38 @@ func TestCaseWithMemoryTooSmall(t *testing.T) {
 			"   10 |         3 0 0 0",
 			"      |             ^",
 			"      |             vm memory size is set to 2",
+		},
+	}.Error(t)
+}
+
+func TestCaseErrorWithMemoryValueMismatch(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   1024",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    memory at 2 {",
+			"        3 4 7 6",
+			"    }",
+			"}",
+		},
+		code: []string{
+			">>",
+			"+++>",
+			"++++>",
+			"+++++>",
+			"++++++",
+		},
+		expected: []string{
+			"test.bftest:10:13: error: memory value mismatch",
+			"   10 |         3 4 7 6",
+			"      |             ^",
+			"      |             got 5",
 		},
 	}.Error(t)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
+
 	"github.com/flily/go-brainfuck/config"
 	"github.com/flily/go-brainfuck/context"
 	"github.com/flily/go-brainfuck/infra"
@@ -12,7 +13,7 @@ import (
 	"github.com/flily/go-brainfuck/vm"
 )
 
-func loadScriptWith[T MemoryUnit](item *TestDriverItem, file *context.FileContext) (*infra.CodeMap, error) {
+func loadScriptWith[T MemoryUnit](file *context.FileContext) (*infra.CodeMap, error) {
 	parser := parser.NewParser(file)
 	codemap, err := parser.Parse()
 	if err != nil {
@@ -54,8 +55,17 @@ func caseCheckInput[T MemoryUnit](kase *ContextItem[TestCase], input *iofmt.Buff
 func caseCheckOutput[T MemoryUnit](kase *ContextItem[TestCase], got []T) error {
 	expected := convertList[int64, T](UnpackValues(kase.Value.Output.Value))
 	if len(got) != len(expected) {
-		err := kase.Value.Output.Context.Error("output length mismatch").
-			With("expected %d, got %d", len(expected), len(got))
+		var err error
+		if len(got) < len(expected) {
+			ctx := kase.Value.Output.Value[len(got)].Context
+			err = ctx.Error("output data less than expected").
+				With("output %d data items, expect %d", len(got), len(expected))
+		} else {
+			ctx := kase.Value.Output.Value[len(expected)-1].Context
+			err = ctx.Error("output data more than expected").
+				With("output %d data items, expect %d", len(got), len(expected))
+		}
+
 		return err
 	}
 
@@ -141,7 +151,7 @@ func RunCase[T MemoryUnit](item *TestDriverItem, codemap *infra.CodeMap, kase *C
 }
 
 func runWithScript[T MemoryUnit](item *TestDriverItem, script *context.FileContext) error {
-	codemap, err := loadScriptWith[T](item, script)
+	codemap, err := loadScriptWith[T](script)
 	if err != nil {
 		return err
 	}
