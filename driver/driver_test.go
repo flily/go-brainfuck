@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"fmt"
 	"testing"
 
 	"strings"
@@ -83,6 +84,51 @@ func TestSimpleCase(t *testing.T) {
 	}.Ok(t)
 }
 
+func multilineFormat(lines []string, args ...any) []string {
+	result := make([]string, len(lines))
+	for i, line := range lines {
+		if strings.Contains(line, "%") {
+			result[i] = fmt.Sprintf(line, args...)
+
+		} else {
+			result[i] = line
+		}
+	}
+
+	return result
+}
+
+func TestSimpleCaseWithAllWordTypes(t *testing.T) {
+	confTemplate := []string{
+		`script "test.bf"`,
+		"init {",
+		"    memory-size   1024",
+		"    stack-size    128",
+		"    word          %s",
+		"}",
+		"",
+		"case {",
+		"    memory {",
+		"        3 0 0 0",
+		"    }",
+		"}",
+	}
+
+	code := "+++++--"
+	wordTypes := []string{
+		"uint8", "uint16", "uint32", "uint64",
+		"int8", "int16", "int32", "int64",
+	}
+
+	for _, wordType := range wordTypes {
+		conf := multilineFormat(confTemplate, wordType)
+		testDriverCase{
+			driver: conf,
+			code:   []string{code},
+		}.Ok(t)
+	}
+}
+
 func TestCaseSimpleIO(t *testing.T) {
 	testDriverCase{
 		driver: []string{
@@ -135,6 +181,33 @@ func TestCaseErrorWithCompilationError(t *testing.T) {
 			"    1 | ,+++[.",
 			"      |     ^",
 			"      |     no matched ']' for this",
+		},
+	}.Error(t)
+}
+
+func TestCaseErrorWithNoWordType(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   1024",
+			"    stack-size    128",
+			"}",
+			"",
+			"case {",
+			"    memory {",
+			"        3 0 0 0",
+			"    }",
+			"}",
+		},
+		code: []string{
+			"+++++--",
+		},
+		expected: []string{
+			"test.bftest:2:1: error: no word type specified",
+			"    2 | init {",
+			"      | ^^^^",
+			"      | use 'word <type>' to specify the word type in init",
 		},
 	}.Error(t)
 }

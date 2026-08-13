@@ -19,7 +19,7 @@ const (
 )
 
 func openReadFile(filename string, defaultReader io.Reader) (io.Reader, error) {
-	if filename == "" {
+	if len(filename) <= 0 {
 		return defaultReader, nil
 	}
 
@@ -32,7 +32,7 @@ func openReadFile(filename string, defaultReader io.Reader) (io.Reader, error) {
 }
 
 func openWriteFile(filename string, defaultWriter io.Writer) (io.Writer, error) {
-	if filename == "" {
+	if len(filename) <= 0 {
 		return defaultWriter, nil
 	}
 

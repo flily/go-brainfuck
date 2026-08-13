@@ -203,13 +203,11 @@ func genericRunWith(item *TestDriverItem, script *context.FileContext) error {
 		if ctx == nil {
 			// word-type is not set
 			kwCtx := item.Init.Context
-			err = kwCtx.Error("missing required field").
-				With("no word-type specified")
-		} else {
-			err = item.Init.Value.WordType.Context.
-				Error("invalid memory unit type").
-				With("invalid memory unit type '%s'", ut.String())
+			err = kwCtx.Error("no word type specified").
+				With("use 'word <type>' to specify the word type in init")
 		}
+
+		// word-type is always right when it is set.
 	}
 
 	return err
