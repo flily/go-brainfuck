@@ -1,6 +1,8 @@
 package main
 
 import (
+	"path"
+
 	"github.com/flily/go-brainfuck/context"
 	"github.com/flily/go-brainfuck/driver"
 )
@@ -26,5 +28,6 @@ func runCase(filename string) error {
 		return err
 	}
 
-	return driver.GenericRun(driverItem)
+	dirName := path.Dir(filename)
+	return driver.GenericRun(driverItem, dirName)
 }

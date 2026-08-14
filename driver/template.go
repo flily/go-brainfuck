@@ -143,6 +143,7 @@ func (p *InitParameters) Equal(o InitParameters) bool {
 }
 
 type TestDriverItem struct {
+	Filename   string
 	ScriptName ContextItem[string]
 	Init       ContextItem[InitParameters]
 	Tests      []ContextItem[TestCase]

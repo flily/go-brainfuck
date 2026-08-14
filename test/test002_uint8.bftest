@@ -1,0 +1,63 @@
+script "test002_io_add.bf"
+
+init {
+    memory-size     256
+    stack-size      32
+    word            uint8
+}
+
+case {
+    input {
+        0
+    }
+
+    output {
+        3
+    }
+
+    memory {
+        3 0 0 0
+    }
+}
+
+case {
+    input {
+        1
+    }
+
+    output {
+        4
+    }
+
+    memory {
+        4 0 0 0
+    }
+}
+
+case {
+    input {
+        100
+    }
+
+    output {
+        103
+    }
+
+    memory {
+        103 0 0 0
+    }
+}
+
+case {
+    input {
+        255
+    }
+
+    output {
+        2
+    }
+
+    memory {
+        2 0 0 0
+    }
+}

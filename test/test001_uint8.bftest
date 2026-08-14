@@ -1,0 +1,13 @@
+script "test001_add.bf"
+
+init {
+    memory-size     256
+    stack-size      32
+    word            uint8
+}
+
+case {
+    memory {
+        3 0 0 0
+    }
+}

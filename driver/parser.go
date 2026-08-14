@@ -8,11 +8,13 @@ import (
 )
 
 type Parser struct {
+	filename  string
 	tokenizer *Tokenizer
 }
 
 func NewParser(filename string, file *context.FileContext) *Parser {
 	p := &Parser{
+		filename:  filename,
 		tokenizer: NewTokenizer(file),
 	}
 
@@ -349,7 +351,8 @@ func checkRequiredFirstSection(required map[string]bool, elem *Element) error {
 
 func (p *Parser) Parse() (*TestDriverItem, error) {
 	item := &TestDriverItem{
-		Tests: make([]ContextItem[TestCase], 0, 16),
+		Filename: p.filename,
+		Tests:    make([]ContextItem[TestCase], 0, 16),
 	}
 
 	sectionAppearances := map[string]bool{

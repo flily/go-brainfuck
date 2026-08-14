@@ -2,6 +2,7 @@ package driver
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/fatih/color"
 
@@ -156,12 +157,21 @@ func runWithScript[T MemoryUnit](item *TestDriverItem, script *context.FileConte
 		return err
 	}
 
+	fmt.Printf("[ %s ] %s with script %s\n",
+		color.YellowString("RUN"),
+		color.CyanString(item.Filename),
+		color.YellowString(script.Filename))
+
 	for _, test := range item.Tests {
 		err := RunCase[T](item, codemap, &test)
 		if err != nil {
 			return err
 		}
 	}
+
+	fmt.Printf("[ %s ] %s\n",
+		color.GreenString("PASS"),
+		color.CyanString(item.Filename))
 
 	return nil
 }
@@ -213,9 +223,10 @@ func genericRunWith(item *TestDriverItem, script *context.FileContext) error {
 	return err
 }
 
-func GenericRun(item *TestDriverItem) error {
+func GenericRun(item *TestDriverItem, baseDir string) error {
 	scriptFilename := item.ScriptName.Value
-	scriptCtx, err := context.ReadFile(scriptFilename)
+	filename := path.Join(baseDir, scriptFilename)
+	scriptCtx, err := context.ReadFile(filename)
 	if err != nil {
 		err = item.ScriptName.Context.Error("read file failed").
 			With("%s", err)
