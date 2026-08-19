@@ -185,55 +185,88 @@ func (p *Parser) parseNumberList() ([]ContextItem[int64], error) {
 	return p.parseNumbersInList()
 }
 
-func (p *Parser) parseCaseMemoryBlock(keyword *Element, item *TestCase) error {
+func (p *Parser) parseOffsetMemoryBlock(keyword *Element, name string) (*ContextItem[uint64], *ContextItem[[]ContextItem[int64]], error) {
 	token, err := p.nextToken()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
+	var at *ContextItem[uint64]
 	if token.Token == TokenIdentifier {
 		if token.ValueString != KeywordAt {
 			err := token.Errorf("syntax error").
-				With("use 'at' to specify memory start address")
-			return err
+				With("use 'at' to specify start address of %s block", name)
+			return nil, nil, err
 		}
 
 		addrToken, err := p.nextToken()
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
 		if addrToken.Token != TokenInt {
 			err := addrToken.Errorf("syntax error").
 				With("expect integer as address")
-			return err
+			return nil, nil, err
 		}
 
 		if addrToken.ValueNegative {
 			err := addrToken.Errorf("invalid address").
 				With("address MUST BE positive")
-			return err
+			return nil, nil, err
 		}
 
-		item.MemoryAt = addrToken.UintValue()
+		r := addrToken.UintValue()
+		at = &r
+
 		token, err = p.nextToken()
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 	}
 
 	if token.Token != TokenBraceLeft {
 		err := token.Errorf("syntax error").
-			With("expect '{' to start memory block")
-		return err
+			With("expect '{' to start %s block", name)
+		return nil, nil, err
 	}
 
 	memory, err := p.parseNumbersInList()
 	if err != nil {
+		return nil, nil, err
+	}
+
+	result := NewContextItem(memory, keyword.Context)
+	return at, &result, nil
+}
+
+func (p *Parser) parseCaseInitBlock(keyword *Element, item *TestCase) error {
+	at, init, err := p.parseOffsetMemoryBlock(keyword, FieldInit)
+	if err != nil {
 		return err
 	}
 
-	item.Memory = NewContextItem(memory, keyword.Context)
+	if at != nil {
+		item.InitAt = *at
+	}
+
+	item.Init = *init
+
+	return nil
+}
+
+func (p *Parser) parseCaseMemoryBlock(keyword *Element, item *TestCase) error {
+	at, memory, err := p.parseOffsetMemoryBlock(keyword, FieldMemory)
+	if err != nil {
+		return err
+	}
+
+	if at != nil {
+		item.MemoryAt = *at
+	}
+
+	item.Memory = *memory
+
 	return nil
 }
 
@@ -254,6 +287,12 @@ func (p *Parser) parseCaseParameters(keyword *Element, item *TestCase) (bool, er
 		}
 
 		item.Output = NewContextItem(output, keyword.Context)
+
+	case FieldInit:
+		err := p.parseCaseInitBlock(keyword, item)
+		if err != nil {
+			return false, err
+		}
 
 	case FieldMemory:
 		err := p.parseCaseMemoryBlock(keyword, item)

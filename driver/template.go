@@ -24,6 +24,7 @@ const (
 	FieldRaiseEOF   = "raise-eof"
 	FieldInput      = "input"
 	FieldOutput     = "output"
+	FieldInit       = "init"
 	FieldMemory     = "memory"
 	KeywordAt       = "at"
 )
@@ -65,6 +66,8 @@ type TestCase struct {
 	Name     ContextItem[string]
 	Input    ContextItem[[]ContextItem[int64]]
 	Output   ContextItem[[]ContextItem[int64]]
+	Init     ContextItem[[]ContextItem[int64]]
+	InitAt   ContextItem[uint64]
 	Memory   ContextItem[[]ContextItem[int64]]
 	MemoryAt ContextItem[uint64]
 }
@@ -74,6 +77,7 @@ func NewTestCase(name string, ctx *context.Context) ContextItem[TestCase] {
 		Name:     NewContextItem(name, ctx),
 		Input:    NewContextItem(make([]ContextItem[int64], 0), ctx),
 		Output:   NewContextItem(make([]ContextItem[int64], 0), ctx),
+		Init:     NewContextItem(make([]ContextItem[int64], 0), ctx),
 		Memory:   NewContextItem(make([]ContextItem[int64], 0), ctx),
 		MemoryAt: NewContextItem[uint64](0, ctx),
 	}
@@ -91,6 +95,14 @@ func (c *TestCase) Equal(o TestCase) bool {
 	}
 
 	if !slices.Equal(UnpackValues(c.Output.Value), UnpackValues(o.Output.Value)) {
+		return false
+	}
+
+	if !slices.Equal(UnpackValues(c.Init.Value), UnpackValues(o.Init.Value)) {
+		return false
+	}
+
+	if c.InitAt.Value != o.InitAt.Value {
 		return false
 	}
 

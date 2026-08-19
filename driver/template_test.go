@@ -35,6 +35,11 @@ func TestTestCaseEqual(t *testing.T) {
 		NewContextItem[int64](22, nil),
 	}, nil)
 	expected.Value.MemoryAt = NewContextItem[uint64](1024, nil)
+	expected.Value.Init = NewContextItem([]ContextItem[int64]{
+		NewContextItem[int64](31, nil),
+		NewContextItem[int64](32, nil),
+	}, nil)
+	expected.Value.InitAt = NewContextItem[uint64](2048, nil)
 
 	o := NewTestCase("lorem ipsum", nil)
 	if expected.Value.Equal(o.Value) {
@@ -61,6 +66,19 @@ func TestTestCaseEqual(t *testing.T) {
 		t.Fatalf("expected not equal, got equal")
 	}
 
+	o.Value.Init = NewContextItem([]ContextItem[int64]{
+		NewContextItem[int64](31, nil),
+		NewContextItem[int64](32, nil),
+	}, nil)
+	if expected.Value.Equal(o.Value) {
+		t.Fatalf("expected not equal, got equal")
+	}
+
+	o.Value.InitAt = NewContextItem[uint64](2048, nil)
+	if expected.Value.Equal(o.Value) {
+		t.Fatalf("expected not equal, got equal")
+	}
+
 	o.Value.Memory = NewContextItem([]ContextItem[int64]{
 		NewContextItem[int64](21, nil),
 		NewContextItem[int64](22, nil),
@@ -70,6 +88,7 @@ func TestTestCaseEqual(t *testing.T) {
 	}
 
 	o.Value.MemoryAt = NewContextItem[uint64](1024, nil)
+
 	if !expected.Value.Equal(o.Value) {
 		t.Fatalf("expected equal, got not equal")
 	}

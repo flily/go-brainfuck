@@ -466,6 +466,98 @@ func TestParserOnSimpleCaseWithMemoryAt(t *testing.T) {
 	checkOK(t, input, expected)
 }
 
+func TestTestParserOnSimpleCaseWithInit(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {`,
+		`        1 2 3 4 5 6`,
+		`    }`,
+		`    output {`,
+		`        2 3 4 5 6 7`,
+		`    }`,
+		`    init {`,
+		`        3 4 5 6 7 8`,
+		`    }`,
+		`    memory {`,
+		`        4 5 6 7 8 9`,
+		`    }`,
+		`}`,
+	}, "\n")
+
+	expected := &TestDriverItem{
+		ScriptName: NewContextItem("path/to/script.bf", nil),
+		Init: NewContextItem(InitParameters{
+			MemorySize: NewContextItem(uint64(1024), nil),
+			StackSize:  NewContextItem(uint64(256), nil),
+			WordType:   NewContextItem(config.MemoryUnitTypeUint8, nil),
+		}, nil),
+		Tests: []ContextItem[TestCase]{
+			NewContextItem(TestCase{
+				Name:   NewContextItem("example", nil),
+				Input:  ctxNums(1, 2, 3, 4, 5, 6),
+				Output: ctxNums(2, 3, 4, 5, 6, 7),
+				Init:   ctxNums(3, 4, 5, 6, 7, 8),
+				Memory: ctxNums(4, 5, 6, 7, 8, 9),
+			}, nil),
+		},
+	}
+
+	checkOK(t, input, expected)
+}
+
+func TestTestParserOnSimpleCaseWithInitAt(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {`,
+		`        1 2 3 4 5 6`,
+		`    }`,
+		`    output {`,
+		`        2 3 4 5 6 7`,
+		`    }`,
+		`    init at 42 {`,
+		`        3 4 5 6 7 8`,
+		`    }`,
+		`    memory at 53 {`,
+		`        4 5 6 7 8 9`,
+		`    }`,
+		`}`,
+	}, "\n")
+
+	expected := &TestDriverItem{
+		ScriptName: NewContextItem("path/to/script.bf", nil),
+		Init: NewContextItem(InitParameters{
+			MemorySize: NewContextItem(uint64(1024), nil),
+			StackSize:  NewContextItem(uint64(256), nil),
+			WordType:   NewContextItem(config.MemoryUnitTypeUint8, nil),
+		}, nil),
+		Tests: []ContextItem[TestCase]{
+			NewContextItem(TestCase{
+				Name:     NewContextItem("example", nil),
+				Input:    ctxNums(1, 2, 3, 4, 5, 6),
+				Output:   ctxNums(2, 3, 4, 5, 6, 7),
+				Init:     ctxNums(3, 4, 5, 6, 7, 8),
+				InitAt:   NewContextItem[uint64](42, nil),
+				Memory:   ctxNums(4, 5, 6, 7, 8, 9),
+				MemoryAt: NewContextItem[uint64](53, nil),
+			}, nil),
+		},
+	}
+
+	checkOK(t, input, expected)
+}
+
 func TestParserErrorOnWrongNumberList(t *testing.T) {
 	input := strings.Join([]string{
 		`script "path/to/script.bf"`,
@@ -621,6 +713,31 @@ func TestParserErrorOnMemoryBlockNoBrace(t *testing.T) {
 	checkError(t, input, expected)
 }
 
+func TestParserErrorOnInitBlockNoBrace(t *testing.T) {
+	input := strings.Join([]string{
+		`script "path/to/script.bf"`,
+		`init {`,
+		`    memory-size  1024`,
+		`    stack-size   256`,
+		`    word         uint8`,
+		`}`,
+		`case example {`,
+		`    input {}`,
+		`    output {}`,
+		`    init 3 4 5 6 7 8`,
+		`}`,
+	}, "\n")
+
+	expected := strings.Join([]string{
+		"test.bft:10:10: error: syntax error",
+		"   10 |     init 3 4 5 6 7 8",
+		"      |          ^",
+		"      |          expect '{' to start init block",
+	}, "\n")
+
+	checkError(t, input, expected)
+}
+
 func TestParserErrorOnMemoryBlockWrongStartTokenFormat1(t *testing.T) {
 	input := strings.Join([]string{
 		`script "path/to/script.bf"`,
@@ -690,7 +807,7 @@ func TestParserErrorOnMemoryBlockWrongAtCommand(t *testing.T) {
 		"test.bft:10:12: error: syntax error",
 		"   10 |     memory on 42 {}",
 		"      |            ^^",
-		"      |            use 'at' to specify memory start address",
+		"      |            use 'at' to specify start address of memory block",
 	}, "\n")
 
 	checkError(t, input, expected)
