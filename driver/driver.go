@@ -115,8 +115,40 @@ func caseCheckMemory[T MemoryUnit](bfvm *vm.VM[T], kase *ContextItem[TestCase]) 
 	return nil
 }
 
+func initVMMemory[T MemoryUnit](bfvm *vm.VM[T], kase *ContextItem[TestCase]) error {
+	base := 0
+	length := len(kase.Value.Init.Value)
+
+	if kase.Value.InitAt.Valid() {
+		base = int(kase.Value.InitAt.Value)
+		if base < 0 || base >= bfvm.MemorySize {
+			err := kase.Value.InitAt.Context.Error("memory base out of range").
+				With("vm memory size is set to %d", bfvm.MemorySize)
+			return err
+		}
+	}
+
+	if base+length > bfvm.MemorySize {
+		i := bfvm.MemorySize - base
+		value := kase.Value.Init.Value[i]
+		err := value.Context.Error("memory initialization out of range").
+			With("vm memory size is set to %d", bfvm.MemorySize)
+		return err
+	}
+
+	for i, value := range kase.Value.Init.Value {
+		bfvm.Memory[base+i] = T(value.Value)
+	}
+
+	return nil
+}
+
 func RunCase[T MemoryUnit](item *TestDriverItem, codemap *infra.CodeMap, kase *ContextItem[TestCase]) error {
 	bfvm := initVM[T](item, codemap)
+
+	if err := initVMMemory(bfvm, kase); err != nil {
+		return err
+	}
 
 	inputData := UnpackValues(kase.Value.Input.Value)
 	input := iofmt.NewBufferedReader(convertList[int64, T](inputData))

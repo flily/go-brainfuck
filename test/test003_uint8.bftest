@@ -1,4 +1,4 @@
-script "test003_sum.bf"
+script "test003_sumio.bf"
 
 init {
     memory-size     256

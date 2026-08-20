@@ -414,3 +414,85 @@ func TestCaseErrorWithMemoryValueMismatch(t *testing.T) {
 		},
 	}.Error(t)
 }
+
+func TestCaseWithMemoryInit(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   1024",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    init at 2 {",
+			"        3 4 5 6",
+			"    }",
+			"    memory {",
+			"        0 0 5 6 7 8",
+			"    }",
+			"}",
+		},
+		code: []string{
+			">>",
+			"[++>]",
+		},
+	}.Ok(t)
+}
+
+func TestCaseErrorWithMemoryInitOutOfRange(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   2",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    init at 4 {",
+			"        3 0 0 0",
+			"    }",
+			"}",
+		},
+		code: []string{
+			"+++++--",
+		},
+		expected: []string{
+			"test.bftest:9:13: error: memory base out of range",
+			"    9 |     init at 4 {",
+			"      |             ^",
+			"      |             vm memory size is set to 2",
+		},
+	}.Error(t)
+}
+
+func TestCaseErrorWithMemoryInitTooLarge(t *testing.T) {
+	testDriverCase{
+		driver: []string{
+			`script "test.bf"`,
+			"init {",
+			"    memory-size   2",
+			"    stack-size    128",
+			"    word          uint8",
+			"}",
+			"",
+			"case {",
+			"    init {",
+			"        3 0 0 0",
+			"    }",
+			"}",
+		},
+		code: []string{
+			"+++++--",
+		},
+		expected: []string{
+			"test.bftest:10:13: error: memory initialization out of range",
+			"   10 |         3 0 0 0",
+			"      |             ^",
+			"      |             vm memory size is set to 2",
+		},
+	}.Error(t)
+}
