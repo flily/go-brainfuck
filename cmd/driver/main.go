@@ -14,7 +14,7 @@ func doRun(args []string) {
 	_ = set.Parse(args)
 
 	if set.NArg() <= 0 {
-		set.Usage()
+		runCase(".")
 		return
 	}
 
